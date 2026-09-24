@@ -1,0 +1,325 @@
+<!DOCTYPE html><html class="dark" lang="tr"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "tertiary-fixed-dim": "#7bd0ff", "tertiary-fixed": "#c4e7ff", "on-error": "#690005", "inverse-on-surface": "#2c303b", "surface-tint": "#00e479", "on-background": "#dfe2f1", "surface-container-highest": "#313540", "on-tertiary-fixed": "#001e2c", "on-secondary-container": "#572000", "outline": "#849585", "on-primary-container": "#007139", "outline-variant": "#3b4b3d", "primary-container": "#00ff88", "primary": "#f1ffef", "error": "#ffb4ab", "secondary-fixed": "#ffdbcc", "primary-fixed-dim": "#00e479", "on-primary": "#003919", "on-tertiary": "#00354a", "on-secondary": "#561f00", "on-secondary-fixed-variant": "#7a3000", "on-error-container": "#ffdad6", "surface-container": "#1c1f2a", "on-surface": "#dfe2f1", "background": "#0f131d", "tertiary": "#f8fbff", "on-tertiary-fixed-variant": "#004c69", "on-surface-variant": "#b9cbb9", "on-secondary-fixed": "#351000", "inverse-surface": "#dfe2f1", "error-container": "#93000a", "surface-variant": "#313540", "surface-dim": "#0f131d", "surface": "#0f131d", "surface-bright": "#353944", "secondary": "#ffb693", "on-tertiary-container": "#00698f", "primary-fixed": "#60ff99", "secondary-container": "#fe6b00", "surface-container-low": "#171b26", "on-primary-fixed": "#00210c", "secondary-fixed-dim": "#ffb693", "tertiary-container": "#bae4ff", "inverse-primary": "#006d37", "surface-container-lowest": "#0a0e18", "surface-container-high": "#262a35", "on-primary-fixed-variant": "#005228" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "margin": "1rem", "margin-desktop": "2rem", "gutter-desktop": "1.5rem", "space-lg": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-xl": "2rem", "space-md": "1rem", "space-xs": "0.25rem", "space-2xl": "3rem" }, fontFamily: { "display-hero-mobile": ["Plus Jakarta Sans"], "label-button": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-badge": ["Plus Jakarta Sans"], "label-numeric": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "headline-lg-mobile": ["Plus Jakarta Sans"], "display-hero": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"] }, fontSize: { "display-hero-mobile": ["36px", { lineHeight: "44px", fontWeight: "800" }], "label-button": ["16px", { lineHeight: "20px", fontWeight: "800" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "500" }], "label-badge": ["12px", { lineHeight: "16px", fontWeight: "800" }], "label-numeric": ["15px", { lineHeight: "18px", fontWeight: "800" }], "body-sm": ["12px", { lineHeight: "16px", fontWeight: "600" }], "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "800" }], "headline-lg-mobile": ["26px", { lineHeight: "32px", fontWeight: "800" }], "display-hero": ["48px", { lineHeight: "56px", fontWeight: "800" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "500" }], "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "700" }], "headline-md": ["22px", { lineHeight: "28px", fontWeight: "700" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#0f131d;}body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+@keyframes bossPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 107, 0, 0.3), 0 0 30px rgba(255, 68, 0, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(255, 107, 0, 0.7), 0 0 50px rgba(255, 68, 0, 0.4); }
+}
+@keyframes digitGlow {
+  0%, 100% { text-shadow: 0 0 8px rgba(0, 255, 136, 0.5); }
+  50% { text-shadow: 0 0 16px rgba(0, 255, 136, 0.9), 0 0 24px rgba(0, 255, 136, 0.6); }
+}
+@keyframes radarSweep {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.03); opacity: 1; filter: drop-shadow(0 0 10px rgba(0,255,136,0.7)); }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+@keyframes alertBeacon {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+.animate-boss-pulse {
+  animation: bossPulse 2.5s infinite ease-in-out;
+}
+.animate-radar-sweep {
+  animation: radarSweep 3s infinite ease-in-out;
+}
+.animate-digit-glow {
+  animation: digitGlow 2s infinite ease-in-out;
+}
+.animate-alert-beacon {
+  animation: alertBeacon 1.5s infinite ease-in-out;
+}
+</style></head><body class="bg-surface text-on-surface font-body-md flex flex-col min-h-screen selection:bg-primary-container selection:text-on-primary-container"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter flex items-center justify-between gap-space-xs"><div class="flex items-center gap-space-xs"><img alt="Ödev Avcısı Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Wpoe9BeZebSx2Wu7fUQFTd9X6OnnGFg_SSwU6LfSg7vuagX6U-emqfbtQCIBmN1WkhneLUW3bFd_milVwlTAXGNh_8Y1OwNXDyIHI3T_qNQAJ-YNtMYpuZCVR0vs3J0F-bzLxNWIkRub2TRSQbqIdW4D-QaU1V21aYKQLKx3nf40ClDXeauLLOV5hRdPYrXTTigU984Mb2qHwxPBSL84ywy_xvRb_G64WRz6UhUnp3AgRHMkjm-d6RMYE6"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm tracking-tight text-primary leading-none">Ödev Avcısı</span><span class="font-label-badge text-label-badge uppercase tracking-wider text-on-surface-variant leading-none mt-0.5">Sınavlar</span></div></div><div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high shadow-[0_0_12px_rgba(0,255,136,0.2)]"><span class="material-symbols-outlined text-primary-container text-base leading-none">bolt</span><span class="font-label-numeric text-label-numeric text-primary-container leading-none">LVL 7</span><span class="text-outline-variant text-xs">•</span><span class="font-label-badge text-label-badge text-tertiary-fixed leading-none tracking-tight">1450 XP</span></div><div class="flex items-center"><div class="relative p-0.5 rounded-full bg-surface-container shadow-[0_0_10px_rgba(254,107,0,0.5)]"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmAcrlLCwaBAbLUZiG4qRXEqfVUgc8upwGXp5egoMO80VesloGpi9d1x4Y3Ipy2VYFidXbWk71JQLdtus6j5GDjNJHq4kipGwyz1fMGrgnM2fzonyvm7jOa_nGpHR8YoyUwgtDhleVYQTMXm60MKhgo6Zdz720twujQWcaUOxtq25cIWHOH2PxT17D0Lm53OULFpFHiAzFvCEWNQroRLYNq-9LxI-7PfpNkyolKc3VFdpdkDtnH6czjQ"><span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary-container rounded-full shadow-[0_0_8px_rgba(0,255,136,0.9)]"></span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-24 bg-surface"><div class="flex flex-col w-full px-gutter pb-space-xl gap-space-md">
+<!-- Smart Alarm Status Banner -->
+<div class="relative overflow-hidden rounded-lg bg-surface-container-high p-space-md shadow-[0_4px_20px_rgba(0,255,136,0.12)]" style="animation: 3s ease-in-out 0s infinite normal none running radarSweep;">
+<div class="flex items-center gap-space-sm">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container shadow-[0_0_12px_rgba(0,255,136,0.35)] animate-pulse">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">notifications_active</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="inline-block w-2 h-2 rounded-full bg-primary-container shadow-[0_0_8px_rgba(0,255,136,0.9)]"></span>
+<span class="font-label-badge text-label-badge text-primary-container tracking-wider uppercase">Akıllı Radar Aktif</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface line-clamp-2 mt-0.5">
+          Tüm sınavlar için <span class="text-primary-container font-headline-sm">2 Gün Önceden</span> Sesli &amp; Görsel Boss Alarmı Kurulu!
+        </p>
+</div>
+</div>
+</div>
+<!-- Hero Section: Closest Boss Battle Card -->
+<div class="relative rounded-lg bg-surface-container p-space-md shadow-[0_6px_0_#070a11,0_0_24px_rgba(254,107,0,0.25)] flex flex-col gap-space-md" style="animation: 2.5s ease-in-out 0s infinite normal none running bossPulse;">
+<!-- Header Pill & Boss Badge -->
+<div class="flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-white shadow-[0_0_12px_rgba(254,107,0,0.6)]">
+<span class="material-symbols-outlined text-base animate-bounce" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-badge text-label-badge uppercase tracking-wider">En Yakın Boss Savaşı</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-secondary-fixed">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-label-numeric text-label-numeric">18 Kasım Perşembe • 09:30</span>
+</div>
+</div>
+<!-- Exam Title & Visual Banner -->
+<div class="flex flex-col gap-space-xs">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-secondary-container tracking-tight drop-shadow-[0_0_10px_rgba(254,107,0,0.4)]">
+        Matematik 1. Dönem 2. Yazılı
+      </h2>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container font-label-badge text-label-badge uppercase tracking-wide" style="animation: 1.8s ease-in-out 0s infinite normal none running alertBeacon; box-shadow: rgba(255, 180, 171, 0.4) 0px 0px 12px;">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+          Kritik Zaman: Hazırlık Modu Başlat!
+        </span>
+</div>
+</div>
+<!-- Thematic Boss Image Placeholder -->
+<div class="relative w-full h-32 rounded-DEFAULT overflow-hidden bg-surface-container-lowest">
+<img class="w-full h-full object-cover opacity-80 mix-blend-luminosity" data-alt="A futuristic dark fantasy arcade boss screen showing a robotic cyber dragon covered in glowing mathematical equations, algebraic formulas, geometric cyber-shields, glowing in neon orange and vibrant green cybernetic lighting, high octane esports arena mood, cinematic 3D render." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBXHzUvH9C-LlSuduFUIXVKRoUJc7ePB3rEoag7ffXaj8cEC4k9pa-FF84e49MKZlsAPknZQNYKe4FVU0vMjunukWwYHob8OYGeOvUWJmOsbErelbElNWPNVERUZAW34_lpzEPAswjozKhkeAUXwqDljwQmQlKvippOptIW9d4ah4L4jTvyKPYZ2T_DumrfZMASGuiJ1LPQzMIASTvd6OAHtO-rRHnHpKS_lb0b9ArVxv3pzh6sKfrHw">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/40 to-transparent"></div>
+<div class="absolute bottom-2 left-3 flex items-center gap-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-lowest/80 text-primary-container font-label-numeric text-label-numeric backdrop-blur-md">
+          ⚔️ Boss Gücü: 850 HP
+        </span>
+</div>
+</div>
+<!-- Huge Countdown Timer Deck -->
+<div class="grid grid-cols-3 gap-space-xs">
+<!-- Days -->
+<div class="flex flex-col items-center justify-center p-3 rounded-DEFAULT bg-surface-container-high shadow-[0_4px_0_#0f172a]">
+<span class="font-display-hero-mobile text-display-hero-mobile text-secondary-fixed leading-none" id="count-days" style="animation: 2.4s ease-in-out 0s infinite normal none running digitGlow;">02</span>
+<span class="font-label-badge text-label-badge uppercase text-on-surface-variant tracking-wider mt-1">GÜN</span>
+</div>
+<!-- Hours -->
+<div class="flex flex-col items-center justify-center p-3 rounded-DEFAULT bg-surface-container-high shadow-[0_4px_0_#0f172a]">
+<span class="font-display-hero-mobile text-display-hero-mobile text-secondary-fixed leading-none" id="count-hours" style="animation: 2.4s ease-in-out 0.4s infinite normal none running digitGlow;">14</span>
+<span class="font-label-badge text-label-badge uppercase text-on-surface-variant tracking-wider mt-1">SAAT</span>
+</div>
+<!-- Minutes -->
+<div class="flex flex-col items-center justify-center p-3 rounded-DEFAULT bg-surface-container-high shadow-[0_4px_0_#0f172a]">
+<span class="font-display-hero-mobile text-display-hero-mobile text-primary-container leading-none animate-pulse" id="count-mins" style="animation: 2.4s ease-in-out 0.8s infinite normal none running digitGlow;">24</span>
+<span class="font-label-badge text-label-badge uppercase text-on-surface-variant tracking-wider mt-1">DAKİKA</span>
+</div>
+</div>
+<!-- Topics Progress & Checklist Bar -->
+<div class="flex flex-col gap-1.5 p-space-sm rounded-DEFAULT bg-surface-container-low">
+<div class="flex items-center justify-between">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Konu Kapsamı: Üslü &amp; Kareköklü Sayılar</span>
+<span class="font-label-numeric text-label-numeric text-primary-container">4 / 6 Tamam</span>
+</div>
+<div class="w-full h-3 rounded-full bg-surface-container-lowest p-0.5 overflow-hidden">
+<div class="h-full rounded-full bg-gradient-to-r from-primary-container via-surface-tint to-tertiary-fixed-dim shadow-[0_0_10px_rgba(0,255,136,0.6)]" style="width: 66%;"></div>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-body-sm text-body-sm text-on-surface line-clamp-1">Kareköklü İfadelerde Çarpma ve Bölme antrenmanı tamamlandı!</span>
+</div>
+</div>
+<!-- CTA Button (Skeuomorphic Arcade Depress Action) -->
+<button class="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary-container text-on-primary-container font-label-button text-label-button shadow-[0_4px_0_#007139,0_0_20px_rgba(0,255,136,0.4)] active:translate-y-[3px] active:shadow-[0_1px_0_#007139] transition-all animate-pulse" id="start-pomodoro-btn">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">timer</span>
+<span class="">ÇALIŞMA SAYACINI BAŞLAT (POMODORO)</span>
+</button>
+</div>
+<!-- Upcoming Other Boss Battles -->
+<div class="flex flex-col gap-space-sm mt-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary-fixed text-xl">radar</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Ufuktaki Diğer Boss Savaşları</span>
+</div>
+<span class="font-label-badge text-label-badge text-on-surface-variant uppercase tracking-wider">3 Sınav</span>
+</div>
+<!-- Exam Card 1: Fen Bilimleri -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container shadow-[0_4px_0_#070a11]">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-12 h-12 rounded-full bg-secondary-container/15 flex items-center justify-center text-secondary-container shadow-[0_0_12px_rgba(254,107,0,0.25)] flex-shrink-0">
+<span class="material-symbols-outlined text-2xl">science</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">Fen Bilimleri Yazılısı</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">21 Kasım Pazartesi • 10:15</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0 ml-2">
+<span class="px-3 py-1 rounded-full bg-secondary-container text-white font-label-numeric text-label-numeric shadow-[0_0_10px_rgba(254,107,0,0.5)]">
+          5 Gün Kaldı
+        </span>
+<span class="font-label-badge text-label-badge text-secondary-fixed mt-1">Boss Seviyesi: Lv.8</span>
+</div>
+</div>
+<!-- Exam Card 2: İngilizce -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container shadow-[0_4px_0_#070a11]">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-12 h-12 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container shadow-[0_0_12px_rgba(0,255,136,0.25)] flex-shrink-0">
+<span class="material-symbols-outlined text-2xl">record_voice_over</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">İngilizce Speaking &amp; Yazılı</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">27 Kasım Pazar • 13:00</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0 ml-2">
+<span class="px-3 py-1 rounded-full bg-surface-container-high text-primary-container font-label-numeric text-label-numeric shadow-[0_0_10px_rgba(0,255,136,0.2)]">
+          11 Gün Kaldı
+        </span>
+<span class="font-label-badge text-label-badge text-tertiary-fixed mt-1">Boss Seviyesi: Lv.6</span>
+</div>
+</div>
+<!-- Exam Card 3: Türkçe -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container shadow-[0_4px_0_#070a11]">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed-dim/15 flex items-center justify-center text-tertiary-fixed flex-shrink-0">
+<span class="material-symbols-outlined text-2xl">auto_stories</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">Türkçe Paragraf &amp; Dil Bilgisi</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">02 Aralık Cuma • 08:45</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0 ml-2">
+<span class="px-3 py-1 rounded-full bg-surface-container-highest text-on-surface font-label-numeric text-label-numeric">
+          16 Gün Kaldı
+        </span>
+<span class="font-label-badge text-label-badge text-on-surface-variant mt-1">Boss Seviyesi: Lv.7</span>
+</div>
+</div>
+</div>
+<!-- Smart Alarm Settings (Tactile Toggles Deck) -->
+<div class="rounded-lg bg-surface-container p-space-md shadow-[0_4px_0_#070a11] flex flex-col gap-space-sm">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-xl">tune</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Erken Uyarı &amp; Radar Ayarları</span>
+</div>
+<span class="font-label-badge text-label-badge text-primary-container uppercase">Otomatik</span>
+</div>
+<!-- Toggle 1: 2 Days Before (Active) -->
+<div class="flex items-center justify-between p-3 rounded-DEFAULT bg-surface-container-high">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary-container">
+<span class="material-symbols-outlined text-lg">crisis_alert</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Sınava 2 Gün Kala Bildir</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Stratejik çalışma planı &amp; Boss uyarısı</span>
+</div>
+</div>
+<button class="alarm-toggle w-12 h-7 rounded-full bg-primary-container p-0.5 flex items-center justify-end transition-all shadow-[0_0_10px_rgba(0,255,136,0.6)]" data-active="true" type="button">
+<span class="w-6 h-6 rounded-full bg-on-primary-container shadow-sm flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-xs font-bold">check</span>
+</span>
+</button>
+</div>
+<!-- Toggle 2: 1 Day Before (Active) -->
+<div class="flex items-center justify-between p-3 rounded-DEFAULT bg-surface-container-high">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-lg">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">1 Gün Kala Hatırlat</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Hızlı özet testi ve zihin toplama modu</span>
+</div>
+</div>
+<button class="alarm-toggle w-12 h-7 rounded-full bg-primary-container p-0.5 flex items-center justify-end transition-all shadow-[0_0_10px_rgba(0,255,136,0.6)]" data-active="true" type="button">
+<span class="w-6 h-6 rounded-full bg-on-primary-container shadow-sm flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-xs font-bold">check</span>
+</span>
+</button>
+</div>
+<!-- Toggle 3: Exam Morning Wake Up (Active) -->
+<div class="flex items-center justify-between p-3 rounded-DEFAULT bg-surface-container-high">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed-dim/20 flex items-center justify-center text-tertiary-fixed">
+<span class="material-symbols-outlined text-lg">alarm_on</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Sınav Sabahı Uyandır</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Enerji artırıcı motivasyon sesi &amp; kahvaltı notu</span>
+</div>
+</div>
+<button class="alarm-toggle w-12 h-7 rounded-full bg-primary-container p-0.5 flex items-center justify-end transition-all shadow-[0_0_10px_rgba(0,255,136,0.6)]" data-active="true" type="button">
+<span class="w-6 h-6 rounded-full bg-on-primary-container shadow-sm flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-xs font-bold">check</span>
+</span>
+</button>
+</div>
+</div>
+<!-- Motivational Quote / Hunter Tips -->
+<div class="p-space-md rounded-lg bg-surface-container-lowest flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-2xl">lightbulb</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-badge text-label-badge text-secondary-container uppercase">Avcı Taktiği: 2 Gün Kuralı</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+        Sınavdan 48 saat önce konuları bitirip deneme çözmek, sınav kaygısını %60 azaltır ve Boss zırhını deler!
+      </p>
+</div>
+</div>
+</div>
+<script>
+  // Dynamic Countdown ticker for minutes
+  (function() {
+    let minutes = 32;
+    const minEl = document.getElementById('count-mins');
+    if (minEl) {
+      setInterval(() => {
+        if (minutes > 0) {
+          minutes -= 1;
+        } else {
+          minutes = 59;
+        }
+        minEl.textContent = minutes < 10 ? '0' + minutes : minutes;
+      }, 60000);
+    }
+
+    // Toggle switch interaction
+    const toggles = document.querySelectorAll('.alarm-toggle');
+    toggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const isActive = toggle.getAttribute('data-active') === 'true';
+        if (isActive) {
+          toggle.setAttribute('data-active', 'false');
+          toggle.classList.remove('bg-primary-container', 'justify-end', 'shadow-[0_0_10px_rgba(0,255,136,0.6)]');
+          toggle.classList.add('bg-surface-container-lowest', 'justify-start');
+          const dot = toggle.querySelector('span');
+          if (dot) {
+            dot.classList.remove('bg-on-primary-container', 'text-primary-container');
+            dot.classList.add('bg-outline', 'text-surface-container-highest');
+            const icon = dot.querySelector('.material-symbols-outlined');
+            if (icon) icon.textContent = 'close';
+          }
+        } else {
+          toggle.setAttribute('data-active', 'true');
+          toggle.classList.remove('bg-surface-container-lowest', 'justify-start');
+          toggle.classList.add('bg-primary-container', 'justify-end', 'shadow-[0_0_10px_rgba(0,255,136,0.6)]');
+          const dot = toggle.querySelector('span');
+          if (dot) {
+            dot.classList.remove('bg-outline', 'text-surface-container-highest');
+            dot.classList.add('bg-on-primary-container', 'text-primary-container');
+            const icon = dot.querySelector('.material-symbols-outlined');
+            if (icon) icon.textContent = 'check';
+          }
+        }
+      });
+    });
+
+    // Pomodoro Action Visual Feedback
+    const pomodoroBtn = document.getElementById('start-pomodoro-btn');
+    if (pomodoroBtn) {
+      pomodoroBtn.addEventListener('click', () => {
+        const originalText = pomodoroBtn.innerHTML;
+        pomodoroBtn.innerHTML = `
+          <span class="material-symbols-outlined text-xl animate-spin">sync</span>
+          <span>SAYAÇ BAŞLATILDI (25 DK ODAKLAN)...</span>
+        `;
+        setTimeout(() => {
+          pomodoroBtn.innerHTML = originalText;
+        }, 3000);
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" data-active-classes="text-primary-container"><div class="flex justify-around items-center h-20 px-space-xs"><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-full text-on-surface-variant transition-colors duration-150" data-path="gorevler" href="#"><span class="material-symbols-outlined text-2xl">sports_esports</span><span class="font-label-badge text-label-badge uppercase tracking-tight">Görevler</span></a><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-full text-on-surface-variant transition-colors duration-150" data-path="dersler" href="#"><span class="material-symbols-outlined text-2xl">menu_book</span><span class="font-label-badge text-label-badge uppercase tracking-tight">Dersler</span></a><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-full text-on-surface-variant transition-colors duration-150" data-path="sinavlar" href="#"><span class="material-symbols-outlined text-2xl">timer</span><span class="font-label-badge text-label-badge uppercase tracking-tight">Sınavlar</span></a><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-full text-on-surface-variant transition-colors duration-150" data-path="oduller" href="#"><span class="material-symbols-outlined text-2xl">military_tech</span><span class="font-label-badge text-label-badge uppercase tracking-tight">Ödüller</span></a></div></nav>
+
+</body></html>

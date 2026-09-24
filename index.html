@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f131d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ödev Avcısı</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: {
+  colors: {
+    "tertiary-fixed-dim":"#7bd0ff","tertiary-fixed":"#c4e7ff","on-error":"#690005",
+    "inverse-on-surface":"#2c303b","surface-tint":"#00e479","on-background":"#dfe2f1",
+    "surface-container-highest":"#313540","on-tertiary-fixed":"#001e2c","on-secondary-container":"#572000",
+    "outline":"#849585","on-primary-container":"#007139","outline-variant":"#3b4b3d",
+    "primary-container":"#00ff88","primary":"#f1ffef","error":"#ffb4ab",
+    "secondary-fixed":"#ffdbcc","primary-fixed-dim":"#00e479","on-primary":"#003919",
+    "on-tertiary":"#00354a","on-secondary":"#561f00","on-secondary-fixed-variant":"#7a3000",
+    "on-error-container":"#ffdad6","surface-container":"#1c1f2a","on-surface":"#dfe2f1",
+    "background":"#0f131d","tertiary":"#f8fbff","on-tertiary-fixed-variant":"#004c69",
+    "on-surface-variant":"#b9cbb9","on-secondary-fixed":"#351000","inverse-surface":"#dfe2f1",
+    "error-container":"#93000a","surface-variant":"#313540","surface-dim":"#0f131d",
+    "surface":"#0f131d","surface-bright":"#353944","secondary":"#ffb693",
+    "on-tertiary-container":"#00698f","primary-fixed":"#60ff99","secondary-container":"#fe6b00",
+    "surface-container-low":"#171b26","on-primary-fixed":"#00210c","secondary-fixed-dim":"#ffb693",
+    "tertiary-container":"#bae4ff","inverse-primary":"#006d37","surface-container-lowest":"#0a0e18",
+    "surface-container-high":"#262a35","on-primary-fixed-variant":"#005228"
+  },
+  borderRadius: { DEFAULT:"1rem", lg:"2rem", xl:"3rem", full:"9999px" },
+  spacing: { margin:"1rem","margin-desktop":"2rem","gutter-desktop":"1.5rem","space-lg":"1.5rem","space-sm":"0.5rem","gutter":"1rem","space-xl":"2rem","space-md":"1rem","space-xs":"0.25rem","space-2xl":"3rem" },
+  fontFamily: { body:"['Plus Jakarta Sans']" },
+  fontSize: {
+    "display-hero-mobile":["36px",{lineHeight:"44px",fontWeight:"800"}],
+    "label-button":["16px",{lineHeight:"20px",fontWeight:"800"}],
+    "body-md":["14px",{lineHeight:"20px",fontWeight:"500"}],
+    "label-badge":["12px",{lineHeight:"16px",fontWeight:"800"}],
+    "label-numeric":["15px",{lineHeight:"18px",fontWeight:"800"}],
+    "body-sm":["12px",{lineHeight:"16px",fontWeight:"600"}],
+    "headline-lg":["32px",{lineHeight:"40px",fontWeight:"800"}],
+    "headline-lg-mobile":["26px",{lineHeight:"32px",fontWeight:"800"}],
+    "body-lg":["16px",{lineHeight:"24px",fontWeight:"500"}],
+    "headline-sm":["18px",{lineHeight:"24px",fontWeight:"700"}],
+    "headline-md":["22px",{lineHeight:"28px",fontWeight:"700"}]
+  }
+}}};
+</script>
+<style type="text/tailwindcss">
+@layer base{
+  html,body{width:100%;margin:0;padding:0;background-color:#0f131d;}
+  body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;font-family:'Plus Jakarta Sans',sans-serif;}
+  .pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}
+  .pt-safe{padding-top:env(safe-area-inset-top,0px);}
+  ::-webkit-scrollbar{display:none;}
+  .no-scrollbar{scrollbar-width:none;}
+}
+.inp{@apply w-full px-3 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface text-[14px] font-semibold placeholder:text-outline placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-primary-container/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] transition-all;}
+.lbl{@apply text-[12px] font-extrabold uppercase tracking-wider text-on-surface-variant mb-1 flex items-center gap-1;}
+.btn-green{@apply w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-primary-container text-on-primary-container font-extrabold text-[15px] shadow-[0_4px_0_#007139] active:translate-y-1 active:shadow-[0_1px_0_#007139] transition-all;}
+.btn-orange{@apply w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-secondary-container text-on-secondary font-extrabold text-[15px] shadow-[0_4px_0_#572000] active:translate-y-1 active:shadow-[0_1px_0_#572000] transition-all;}
+.btn-ghost{@apply w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-surface-container-high text-on-surface font-extrabold text-[14px] shadow-[0_3px_0_#0a0e18] active:translate-y-0.5 transition-all;}
+.card{@apply relative overflow-hidden rounded-lg bg-surface-container p-space-md shadow-[0_4px_0_#070a11];}
+</style>
+<style>
+@keyframes pulseGlow { 0%,100% { box-shadow:0 0 14px rgba(255,107,0,.35);} 50% { box-shadow:0 0 28px rgba(255,107,0,.75);} }
+@keyframes fireGlow { 0%,100% { transform:scale(1);} 50% { transform:scale(1.08);} }
+@keyframes bossPulse { 0%,100% { box-shadow:0 0 15px rgba(255,107,0,.3),0 0 30px rgba(255,68,0,.2);} 50% { box-shadow:0 0 30px rgba(255,107,0,.7),0 0 50px rgba(255,68,0,.4);} }
+@keyframes digitGlow { 0%,100% { text-shadow:0 0 8px rgba(0,255,136,.5);} 50% { text-shadow:0 0 16px rgba(0,255,136,.9);} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+@keyframes toastIn { from { transform:translate(-50%,20px); opacity:0;} to { transform:translate(-50%,0); opacity:1;} }
+.shake{animation:shake .4s ease-in-out;}
+.digit-glow{animation:digitGlow 2s infinite ease-in-out;}
+#toast{animation:toastIn .25s ease-out;}
+</style>
+</head>
+<body class="bg-surface text-on-surface flex flex-col min-h-screen selection:bg-primary-container selection:text-on-primary-container">
+
+<div class="mx-auto w-full max-w-[480px] min-h-screen flex flex-col relative bg-surface shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+  <!-- HEADER -->
+  <header class="fixed top-0 z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.35)] w-full max-w-[480px] left-1/2 -translate-x-1/2">
+    <div class="h-16 px-gutter flex items-center justify-between gap-space-xs">
+      <div class="flex items-center gap-space-xs min-w-0">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-container to-tertiary-fixed-dim flex items-center justify-center shadow-[0_0_12px_rgba(0,255,136,0.4)] shrink-0">
+          <span class="text-xl leading-none">🏹</span>
+        </div>
+        <div class="flex flex-col min-w-0 max-w-[130px]">
+          <span class="font-extrabold text-[18px] leading-[24px] tracking-tight text-primary leading-none whitespace-nowrap truncate">Ödev Avcısı</span>
+          <span id="header-sub" class="text-[12px] font-extrabold uppercase tracking-wider text-on-surface-variant leading-none mt-0.5 whitespace-nowrap truncate">Görevler</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <div id="lvl-chip" class="items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high shadow-[0_0_12px_rgba(0,255,136,0.2)] shrink-0" title="Toplam XP">
+          <span class="material-symbols-outlined text-primary-container text-base leading-none">bolt</span>
+          <span id="lvl-chip-text" class="text-[15px] font-extrabold leading-[18px] text-primary-container leading-none">LVL 1</span>
+        </div>
+        <div id="sync-dot" class="flex items-center gap-1 px-2 py-1 rounded-full bg-surface-container-high shrink-0" title="Senkron durumu">
+          <span class="w-2 h-2 rounded-full bg-outline"></span>
+          <span id="sync-dot-text" class="text-[10px] font-extrabold text-on-surface-variant max-sm:hidden">LOKAL</span>
+        </div>
+        <div class="inline-flex items-center p-0.5 rounded-full bg-surface-container-low shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
+          <button id="role-student" onclick="switchRole('student')" class="px-2.5 py-1.5 rounded-full text-[12px] font-extrabold transition-all flex items-center gap-1">🚀 Ruz</button>
+          <button id="role-parent" onclick="switchRole('parent')" class="px-2.5 py-1.5 rounded-full text-[12px] font-extrabold transition-all flex items-center gap-1">🛡️ Veli</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main id="main" class="flex-1 flex flex-col w-full pt-16 pb-28"></main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="fixed bottom-0 z-50 pb-safe bg-surface/90 backdrop-blur-xl border-t border-surface-container-high w-full max-w-[480px] left-1/2 -translate-x-1/2">
+    <div id="bottom-nav" class="grid grid-cols-5 px-2 py-1.5"></div>
+  </nav>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-[440px] w-[92%] rounded-xl bg-surface-container-high text-on-surface text-[14px] font-bold px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.6)] border border-outline-variant text-center"></div>
+
+<!-- PIN MODAL -->
+<div id="pin-modal" class="hidden fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center px-6">
+  <div id="pin-box" class="w-full max-w-[340px] rounded-xl bg-surface-container p-6 shadow-[0_10px_40px_rgba(0,0,0,0.7)] flex flex-col items-center gap-4">
+    <div class="w-14 h-14 rounded-full bg-secondary-container/20 flex items-center justify-center shadow-[0_0_16px_rgba(254,107,0,0.4)]">
+      <span class="material-symbols-outlined text-secondary-container text-3xl" style="font-variation-settings:'FILL' 1;">shield_lock</span>
+    </div>
+    <div class="text-center">
+      <h3 class="text-[18px] font-extrabold text-primary">Komutan Doğrulaması</h3>
+      <p class="text-[12px] font-semibold text-on-surface-variant mt-1">Veli moduna girmek için PIN gir</p>
+    </div>
+    <div id="pin-dots" class="flex gap-3"></div>
+    <div class="grid grid-cols-3 gap-2 w-full mt-1" id="pin-keys"></div>
+    <button onclick="closePin()" class="text-[12px] font-extrabold text-on-surface-variant mt-1">VAZGEÇ</button>
+    <p class="text-[10px] font-semibold text-outline">İlk kullanım PIN'i: 1234 (Ayarlar'dan değiştir)</p>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center px-6">
+  <div class="w-full max-w-[340px] rounded-xl bg-surface-container p-6 shadow-[0_10px_40px_rgba(0,0,0,0.7)] flex flex-col gap-4">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-secondary-container text-2xl">help</span>
+      <h3 id="confirm-title" class="text-[16px] font-extrabold text-primary">Emin misin?</h3>
+    </div>
+    <p id="confirm-msg" class="text-[13px] font-semibold text-on-surface-variant"></p>
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="closeConfirm()" class="btn-ghost">İptal</button>
+      <button id="confirm-yes" class="btn-orange">Onayla</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div id="detail-modal" class="hidden fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center px-6">
+  <div id="detail-box" class="w-full max-w-[380px] rounded-xl bg-surface-container p-6 shadow-[0_10px_40px_rgba(0,0,0,0.7)]"></div>
+</div>
+
+<script>
+/* ============================================================
+   ÖDEV AVCISI — tek dosya uygulama
+   Öğrenci (Ruz) + Veli (Komutan) modu, XP/Seri/Rozet,
+   Sınav Boss Alarmları, localStorage + Firebase Realtime Sync
+   ============================================================ */
+
+/* ---------- Yardımcılar ---------- */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const nf  = n => Number(n || 0).toLocaleString('tr-TR');
+const ymd = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0'); };
+const todayStr = () => ymd(new Date());
+const addDays = n => { const d = new Date(); d.setDate(d.getDate()+n); return d; };
+const WEEK_TR = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+const WEEK_ABBR = ['PZT','SAL','ÇAR','PER','CUM','CMT','PAZ'];
+const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const MONTHS_ABBR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+const wIdx = d => (new Date(d).getDay() + 6) % 7; // 0=Pzt
+function fmtDateTR(ds){ const d = new Date(ds + 'T00:00:00'); return d.getDate() + ' ' + MONTHS_ABBR[d.getMonth()] + ' ' + WEEK_TR[d.getDay()]; }
+function fmtExamDT(e){ return fmtDateTR(e.date) + ' • ' + (e.time || '09:30'); }
+function taskDue(t){ const time = t.dueTime || '23:59'; return new Date(t.dueDate + 'T' + time); }
+function fmtDue(t){
+  const due = taskDue(t), now = new Date();
+  const d0 = ymd(now), d1 = ymd(addDays(1));
+  const tm = (t.dueTime || '23:59');
+  if (t.dueDate === d0) return 'Bugün ' + tm;
+  if (t.dueDate === d1) return 'Yarın ' + tm;
+  return fmtDateTR(t.dueDate) + ' ' + tm;
+}
+function isOverdue(t){ return (t.status === 'active') && taskDue(t) < new Date(); }
+function leftLabel(dt){
+  const ms = dt - Date.now(); if (ms <= 0) return 'SÜRE DOLDU';
+  const d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4);
+  return (d > 0 ? d + ' GÜN ' : '') + h + ' SAAT ' + m + ' DK';
+}
+function cdText(ms){
+  if (ms <= 0) return 'SÜRE DOLDU';
+  const d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4), s = Math.floor(ms%6e4/1e3);
+  return (d ? d+'g ' : '') + h + 's ' + m + 'dk ' + s + 'sn';
+}
+
+const SUBJECTS = {
+  mat:{ name:'Matematik',       it:'Matematica',          icon:'calculate' },
+  ita:{ name:'İtalyanca',       it:'Italiano',            icon:'menu_book' },
+  sci:{ name:'Fen Bilimleri',   it:'Scienze',             icon:'science'   },
+  sto:{ name:'Tarih',           it:'Storia',              icon:'history_edu' },
+  geo:{ name:'Coğrafya',         it:'Geografia',           icon:'public'    },
+  ing:{ name:'İngilizce',       it:'Inglese',             icon:'language'  },
+  fra:{ name:'Fransızca',       it:'Francese',            icon:'translate' },
+  art:{ name:'Görsel Sanatlar', it:'Arte e Immagine',     icon:'palette'   },
+  mus:{ name:'Müzik',           it:'Musica',              icon:'music_note' },
+  tec:{ name:'Teknoloji',       it:'Tecnologia',          icon:'precision_manufacturing' },
+  rel:{ name:'Din Kültürü',     it:'Religione',           icon:'auto_stories' },
+  gym:{ name:'Beden Eğitimi',   it:'Ed. Fisica',          icon:'sports_soccer' }
+};
+/* Eski anahtar -> yeni ders anahtarı eşlemesi (veri taşima) */
+const SUBJECT_MAP = { mat:'mat', fen:'sci', tur:'ita', ing:'ing', sos:'sto', din:'rel' };
+
+/* Gerçek okul programı: 6 ders/gün, Pzt-Cum (Terza Media)
+   Ders saatleri varsayılan 08:00-13:50; Veli > Planla'dan düzenlenebilir. */
+function realSchedule(){
+  const hours = [
+    ['08:00','08:55'], ['08:55','09:50'], ['10:00','10:55'],
+    ['10:55','11:50'], ['12:00','12:55'], ['12:55','13:50']
+  ];
+  const week = [ // [Pzt, Sal, Çar, Per, Cum] -> [subjectKey, ekstra etiket]
+    ['mat','mat','ita','geo','mus','ing'],
+    ['mus','sci','fra','fra','ita','sto'],
+    ['art','art','ita','ita','ita','rel'],
+    ['gym','gym','ing','ing','mat','mat'],
+    ['sci','ita','tec','tec','geo','sto']
+  ];
+  const items = [];
+  week.forEach((day, d) => day.forEach((s, h) => {
+    items.push({ id: uid(), day: d, type:'school',
+      start: hours[h][0], end: hours[h][1],
+      title: (SUBJECTS[s].name + ' (' + SUBJECTS[s].it + ')'),
+      place: 'Okul' });
+  }));
+  return items;
+}
+const LEVEL_TITLES = ['Çırak Avcı','Genç Avcı','Keskin Pençe','Gölgeler Avcısı','Siber Avcı','Veri Ustası','Kod Şövalyesi','Bilgi Savaşçısı','Efsane Muhafız','Boss Termonatör'];
+const TEMPLATES = [
+  { t:'Yeni Nesil Test Çözümü', d:'20 Yeni Nesil Matematik sorusu çözülecek, boş sorular video çözümden taranacak.', s:'mat', diff:'boss',   xp:350 },
+  { t:'20 Sayfa Kitap Okuma',  d:'Sakin ortamda 20 sayfa kitap okunacak ve ana fikir 2 cümleyle özetlenecek.',       s:'ita', diff:'normal', xp:150 },
+  { t:'İngilizce Kelime Ezberi',d:'Ünite kelimelerinden 15 tanesi kartlara yazılıp cümle içinde kullanılacak.',      s:'ing', diff:'normal', xp:200 },
+  { t:'Fen Konu Özeti',        d:'Konu farkları renkli şema ile deftere çizilecek.',                                  s:'sci', diff:'normal', xp:250 }
+];
+const ICON_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#0f131d"/><text x="24" y="33" font-size="26" text-anchor="middle">🏹</text></svg>');
+
+/* Gerçek ödev listesi (compiti) — veli tarafından güncellenir */
+function realTasks(){
+  const T = (title, subject, desc, dueDate, xp, opts) => Object.assign({
+    id: uid(), title, desc, subject, difficulty: 'normal', xp,
+    createdAt: '2026-09-24', dueDate, dueTime: '08:00', status: 'active'
+  }, opts || {});
+  return [
+    /* --- 25 Eylül Cuma --- */
+    T('Teknoloji: Dik İzdüşüm Çizimi', 'tec', 'İki cismin dik izdüşümünü çiz. Cisimlerin tabanını oluşturmak için bir çokgen çizilmesi gerekiyor.', '2026-09-25', 120),
+    T('Coğrafya: Sayfalar + İklim Kuşakları Haritası', 'geo', '32–33. sayfaları çalış; 42–45. sayfalardaki alıştırmaları yap. İklim kuşaklarını gösteren Dünya çizimini hazırla.', '2026-09-25', 150),
+    T('İtalyanca Sınav Tekrarı', 'ita', 'Sınav için tekrar yap ve protokol kâğıdını getir (kitabı değil).', '2026-09-25', 300, { difficulty: 'boss' }),
+    T('Tarih Sınav Tekrarı', 'sto', 'Sınav için tekrar yap ve 3. cilt tarih kitabını getir.', '2026-09-25', 300, { difficulty: 'boss' }),
+    /* --- 28 Eylül Pazartesi --- */
+    T('Matematik: Notlar + Geometri 3. Cilt', 'mat', 'Defterdeki notları iyice çalış ve geometri kitabının yeni 3. cildini getir.', '2026-09-28', 150),
+    /* --- 29 Eylül Salı --- */
+    T('Fransızca: Ensemble c\'est mieux 3. Cilt', 'fra', 'Ensemble c\'est mieux 3. cildi getir.', '2026-09-29', 50),
+    /* --- 30 Eylül Çarşamba --- */
+    T('Görsel Sanatlar: Fotoğraf + Aydınger Kâğıdı', 'art', 'Kendi yakın çekim fotoğrafının siyah-beyaz fotokopisini ve aydınger kâğıdını getir.', '2026-09-30', 80),
+    /* --- 6 Ekim Salı --- */
+    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', '3. sınıf için hazırlanmış defteri; güncellenmiş adres/telefon defteri ve şemalarla birlikte getir.', '2026-10-06', 100),
+    /* --- Önceki teslimler (tamamlandı) --- */
+    T('İtalyanca: Sogna + Nuovi compagni Sayfaları', 'ita', '"Sogna" kitabında 295, 298, 310 ve 311. sayfalar; Nuovi compagni di viaggio kitabında 294 ve 297. sayfalar.', '2026-09-24', 100, { status: 'completed', completedAt: '2026-09-24' }),
+    T('İngilizce: Tatil Kitabı + Zamanlar Tekrarı', 'ing', 'Tatil kitabını getir; simple present, present continuous ve simple past zamanlarını olumlu, olumsuz ve soru cümlelerinde tekrar et.', '2026-09-24', 120, { status: 'completed', completedAt: '2026-09-24' }),
+    T('Matematik: Sayfa 83 Alıştırmaları', 'mat', '83. sayfadaki 126–129. alıştırmaları yap.', '2026-09-24', 100, { status: 'completed', completedAt: '2026-09-24' }),
+    T('Görsel Sanatlar: Kare İçinde At', 'art', '286–293. sayfaları çalış; "Kare içinde at" başlıklı 1. çalışmayı teslim et.', '2026-09-23', 100, { status: 'completed', completedAt: '2026-09-23' }),
+    T('İtalyanca: Dikte + Protokol Kâğıtları', 'ita', 'Dikte edilen 5 cümleyi yaz; okunan kitapları ve protokol kâğıtlarını getir.', '2026-09-23', 80, { status: 'completed', completedAt: '2026-09-23' }),
+    T('Fen Bilimleri: Belgesel Raporu', 'sci', 'Belgeselle ilgili raporu tamamla.', '2026-09-22', 120, { status: 'completed', completedAt: '2026-09-22' }),
+    T('Tarih: Sorular + 3. Cilt', 'sto', '3. cilt tarih kitabını getir ve verilen soruları tamamla.', '2026-09-22', 100, { status: 'completed', completedAt: '2026-09-22' }),
+    T('Coğrafya: 22–30 Sayfa Çalışması', 'geo', '22–30. sayfaları, yalnızca derste işlenen kısımları çalış.', '2026-09-21', 100, { status: 'completed', completedAt: '2026-09-21' }),
+    T('İtalyanca: Loecher Kitabı', 'ita', 'Varsa Loecher edebiyat kitabını getir.', '2026-09-21', 40, { status: 'completed', completedAt: '2026-09-21' }),
+    T('İngilizce: Gioconda Yazma Alıştırmaları', 'ing', 'Gioconda English 2 çalışma kitapçığında verilen yazma alıştırmalarını getir.', '2026-09-21', 100, { status: 'completed', completedAt: '2026-09-21' }),
+    T('İtalyanca: Dil Bilgisi Tekrarı + Form', 'ita', 'Sınıf sınavı için dil bilgisini tekrar et; 3. cilt coğrafya kitabını ve birlikte düzeltilecek kitap tanıtım formunu getir.', '2026-09-18', 120, { status: 'completed', completedAt: '2026-09-18' }),
+    T('Tarih: Grup Tekrarı + 2. Cilt', 'sto', 'Grup tekrar çalışması için 2. cilt tarih kitabını getir.', '2026-09-18', 80, { status: 'completed', completedAt: '2026-09-18' }),
+    T('İngilizce: I Discover 2 + Tatil Kitabı', 'ing', 'I Discover 2 kitabını ve tatil kitabını getir.', '2026-09-17', 60, { status: 'completed', completedAt: '2026-09-17' }),
+    T('İtalyanca: Dil Bilgisi Kitabı + Özetler', 'ita', 'Dil bilgisi kitabını ve ödevleri; okunan kitapları ve özetleri getir.', '2026-09-16', 80, { status: 'completed', completedAt: '2026-09-16' }),
+    T('İtalyanca: Tarih 2. Cilt + Ödevler', 'ita', '2. cilt tarih kitabını ve dil bilgisi ödevlerini getir.', '2026-09-15', 60, { status: 'completed', completedAt: '2026-09-15' })
+  ];
+}
+/* Gerçek sınavlar: 25 Eylül Cuma verificaciones */
+function realExams(){
+  return [
+    { id: uid(), title: 'Italiano Sınavı (Verifica)', subject: 'ita', date: '2026-09-25', time: '08:00', note: 'Dil bilgisi — protokol kâğıdını getir (kitabı değil)', alarmDays: 2 },
+    { id: uid(), title: 'Storia Sınavı (Verifica)', subject: 'sto', date: '2026-09-25', time: '08:00', note: '3. cilt tarih kitabını getir', alarmDays: 2 }
+  ];
+}
+
+/* ---------- Varsayılan Veri ---------- */
+function seedState(){
+  const t = todayStr();
+  const day = n => ymd(addDays(n));
+  return {
+    version: 1,
+    student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
+    xp: 1360,
+    streak: 5,
+    lastCompletionDate: day(-1),
+    history: [
+      { d: day(-5), xp: 120, n: 1 }, { d: day(-4), xp: 150, n: 1 },
+      { d: day(-3), xp: 120, n: 1 }, { d: day(-2), xp: 200, n: 1 }, { d: day(-1), xp: 150, n: 1 }
+    ],
+    tasks: realTasks(),
+    exams: realExams(),
+    schedule: realSchedule(),
+    rewards: [
+      { id: uid(), title:'1 Saat Oyun Konsolu',   cost:300,  icon:'🎮', active:true },
+      { id: uid(), title:'Arkadaşıyla Buluşma',   cost:500,  icon:'🧑‍🤝‍🧑', active:true },
+      { id: uid(), title:'Pizza Gecesi',          cost:750,  icon:'🍕', active:true },
+      { id: uid(), title:'Sinema Gecesi',         cost:1000, icon:'🎬', active:true },
+      { id: uid(), title:'Yeni Oyun Alımı',       cost:2000, icon:'🕹️', active:true }
+    ],
+    redemptions: [],
+    badges: {},
+    alarmsLast: {},
+    settings: { pin:'1234', notify:false, firebase:null }
+  };
+}
+
+/* ---------- Durum (State) ---------- */
+const LS_KEY = 'odevAvciStateV1';
+const LS_UI  = 'odevAvciUIV1';
+let state = loadState();
+let ui = loadUI();
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) { const s = JSON.parse(raw); if (s && s.version) return migrate(s); }
+  } catch(e) {}
+  const s = seedState(); localStorage.setItem(LS_KEY, JSON.stringify(s)); return s;
+}
+function migrate(s){
+  s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
+  s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
+  s.badges = s.badges || {}; s.alarmsLast = s.alarmsLast || {};
+  s.settings = Object.assign({ pin:'1234', notify:false, firebase:null }, s.settings || {});
+  s.student = s.student || { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' };
+  /* Eski ders anahtarlarını yeni sisteme taşı */
+  s.tasks.forEach(t => { t.subject = SUBJECT_MAP[t.subject] || t.subject; });
+  s.exams.forEach(e => { e.subject = SUBJECT_MAP[e.subject] || e.subject; });
+  return s;
+}
+function loadUI(){
+  try { const raw = localStorage.getItem(LS_UI); if (raw) return JSON.parse(raw); } catch(e){}
+  return { role:'student', view:'home' };
+}
+function saveUI(){ localStorage.setItem(LS_UI, JSON.stringify(ui)); }
+
+let pushTimer = null;
+function save(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+  if (FB.connected && !FB.applyingRemote) {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => { try { FB.ref.set(state); } catch(e) { console.warn('push fail', e); } }, 700);
+  }
+}
+
+/* ---------- Firebase Senkron ---------- */
+const FB = { connected:false, ref:null, applyingRemote:false };
+function setSyncUI(){
+  const dot = $('#sync-dot'), txt = $('#sync-dot-text');
+  if (FB.connected) {
+    dot.classList.add('shadow-[0_0_10px_rgba(0,255,136,0.6)]');
+    dot.firstElementChild.className = 'w-2 h-2 rounded-full bg-primary-container animate-pulse';
+    txt.textContent = 'BULUT'; txt.className = 'text-[10px] font-extrabold text-primary-container';
+  } else {
+    dot.classList.remove('shadow-[0_0_10px_rgba(0,255,136,0.6)]');
+    dot.firstElementChild.className = 'w-2 h-2 rounded-full bg-outline';
+    txt.textContent = 'LOKAL'; txt.className = 'text-[10px] font-extrabold text-on-surface-variant';
+  }
+}
+function fbConnect(cfg){
+  if (typeof firebase === 'undefined') { toast('Firebase yüklenemedi — internet bağlantısı var mı?'); return false; }
+  try {
+    if (FB.connected) { try { FB.ref.off(); firebase.apps.forEach(a => a.delete()); } catch(e){} FB.connected = false; }
+    firebase.initializeApp(cfg);
+    FB.ref = firebase.database().ref('odevAvci');
+    FB.ref.on('value', snap => {
+      const remote = snap.val();
+      if (!remote) { try { FB.ref.set(state); } catch(e){} return; }
+      FB.applyingRemote = true;
+      state = migrate(remote);
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      renderAll();
+      FB.applyingRemote = false;
+    }, err => { toast('Senkron hatası: ' + err.message); });
+    FB.connected = true;
+    setSyncUI(); renderHeader();
+    return true;
+  } catch(e) {
+    toast('Bağlantı kurulamadı: ' + e.message);
+    return false;
+  }
+}
+function fbDisconnect(){
+  try { FB.ref.off(); firebase.apps.forEach(a => a.delete()); } catch(e){}
+  FB.connected = false; FB.ref = null;
+  state.settings.firebase = null; save(); setSyncUI(); renderHeader();
+  toast('Bulut senkronu kapatıldı (veriler cihazda kaldı)');
+}
+
+/* ---------- Seviye / Rozet / Seri ---------- */
+function levelOf(xp){
+  const level = Math.floor(xp / 500) + 1;
+  const into = xp % 500;
+  return { level, title: LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)], into, need: 500, pct: Math.round(into / 500 * 100) };
+}
+const BADGES = [
+  { id:'first',   icon:'flag',                  name:'İlk Ganimet',   desc:'İlk görevini tamamla',            cond: () => doneCount() >= 1 },
+  { id:'ten',     icon:'military_tech',         name:'On Görev',      desc:'10 görev tamamla',                cond: () => doneCount() >= 10 },
+  { id:'boss',    icon:'skull',                 name:'Boss Avcısı',   desc:'3 BOSS görevi bitir',             cond: () => doneBoss() >= 3 },
+  { id:'streak3', icon:'local_fire_department', name:'Ateş Serisi',   desc:'3 gün üst üste çalış',            cond: () => state.streak >= 3 },
+  { id:'streak7', icon:'whatshot',              name:'Hafta Ateşi',   desc:'7 gün üst üste çalış',            cond: () => state.streak >= 7 },
+  { id:'xp1k',    icon:'bolt',                  name:'1000 XP',       desc:'Toplam 1000 XP topla',            cond: () => state.xp >= 1000 },
+  { id:'exam',    icon:'event_available',       name:'Sınav Ranzası', desc:'İlk sınavını geride bırak',       cond: () => state.exams.some(e => new Date(e.date + 'T' + (e.time||'09:30')) < new Date()) },
+  { id:'reward',  icon:'redeem',                name:'Ödül Avcısı',   desc:'İlk ödülünü kazan',               cond: () => state.redemptions.length >= 1 }
+];
+function doneCount(){ return state.tasks.filter(t => t.status === 'completed').length; }
+function doneBoss(){ return state.tasks.filter(t => t.status === 'completed' && t.difficulty === 'boss').length; }
+function checkBadges(){
+  BADGES.forEach(b => {
+    if (!state.badges[b.id] && b.cond()) {
+      state.badges[b.id] = todayStr();
+      toast('🏅 Yeni rozet açıldı: ' + b.name + '!');
+      beep(true);
+    }
+  });
+}
+function addHistory(xp){
+  const t = todayStr();
+  let h = state.history.find(x => x.d === t);
+  if (h) { h.xp += xp; h.n += 1; } else { state.history.push({ d: t, xp, n: 1 }); }
+}
+function bumpStreak(){
+  const t = todayStr(), y = ymd(addDays(-1));
+  if (state.lastCompletionDate === t) return;
+  state.streak = (state.lastCompletionDate === y) ? (state.streak + 1) : 1;
+  state.lastCompletionDate = t;
+}
+function weekStats(){
+  let xp = 0, n = 0;
+  const from = ymd(addDays(-6));
+  state.history.forEach(h => { if (h.d >= from) { xp += h.xp; n += h.n; } });
+  return { xp, n };
+}
+
+/* ---------- Ses & Bildirim ---------- */
+function beep(short){
+  try {
+    beep.ctx = beep.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = beep.ctx, t0 = ctx.currentTime;
+    const seq = short ? [1175] : [880, 1175, 1568];
+    seq.forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      const s = t0 + i * 0.16;
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(0.18, s + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, s + 0.14);
+      o.connect(g).connect(ctx.destination);
+      o.start(s); o.stop(s + 0.18);
+    });
+  } catch(e) {}
+}
+async function askNotify(){
+  if (!('Notification' in window)) { toast('Bu cihaz bildirimleri desteklemiyor'); return; }
+  const p = await Notification.requestPermission();
+  state.settings.notify = (p === 'granted'); save();
+  toast(p === 'granted' ? '🔔 Bildirimler açıldı!' : 'Bildirim izni verilmedi');
+  renderAll();
+}
+function notifyExam(exam){
+  if (!state.settings.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    new Notification('⏰ BOSS ALARMI: ' + exam.title, { body: fmtExamDT(exam) + ' • ' + leftLabel(new Date(exam.date + 'T' + (exam.time||'09:30'))), icon: ICON_URI });
+  } catch(e) {}
+}
+function checkAlarms(){
+  const t = todayStr();
+  state.exams.forEach(e => {
+    const left = Math.ceil((new Date(e.date + 'T' + (e.time||'09:30')) - new Date()) / 864e5);
+    if (left >= 0 && left <= (e.alarmDays || 2) && state.alarmsLast[e.id] !== t) {
+      state.alarmsLast[e.id] = t;
+      beep(false);
+      notifyExam(e);
+      toast('🚨 BOSS ALARMI: ' + e.title + ' — ' + leftLabel(new Date(e.date + 'T' + (e.time||'09:30'))));
+    }
+  });
+  save();
+}
+
+/* ---------- Toast / Modallar ---------- */
+let toastTimer = null;
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg; el.classList.remove('hidden');
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+}
+let confirmCb = null;
+function askConfirm(title, msg, cb, yesLabel){
+  $('#confirm-title').textContent = title;
+  $('#confirm-msg').textContent = msg;
+  $('#confirm-yes').textContent = yesLabel || 'Onayla';
+  confirmCb = cb;
+  $('#confirm-modal').classList.remove('hidden');
+}
+function closeConfirm(){ $('#confirm-modal').classList.add('hidden'); confirmCb = null; }
+$('#confirm-yes').onclick = () => { const cb = confirmCb; closeConfirm(); if (cb) cb(); };
+
+let pinCb = null, pinVal = '';
+function askPin(cb){ pinCb = cb; pinVal = ''; drawPinDots(); $('#pin-modal').classList.remove('hidden'); }
+function closePin(){ $('#pin-modal').classList.add('hidden'); pinCb = null; }
+function drawPinDots(){
+  $('#pin-dots').innerHTML = [0,1,2,3].map(i =>
+    '<div class="w-4 h-4 rounded-full ' + (i < pinVal.length ? 'bg-secondary-container shadow-[0_0_10px_#fe6b00]' : 'bg-surface-container-high') + '"></div>'
+  ).join('');
+}
+function drawPinKeys(){
+  const keys = ['1','2','3','4','5','6','7','8','9','C','0','⌫'];
+  $('#pin-keys').innerHTML = keys.map(k =>
+    '<button onclick="pinKey(\'' + k + '\')" class="h-12 rounded-lg bg-surface-container-high text-on-surface text-[18px] font-extrabold shadow-[0_3px_0_#0a0e18] active:translate-y-0.5 transition-all">' + k + '</button>'
+  ).join('');
+}
+function pinKey(k){
+  if (k === 'C') pinVal = '';
+  else if (k === '⌫') pinVal = pinVal.slice(0, -1);
+  else if (pinVal.length < 4) pinVal += k;
+  drawPinDots();
+  if (pinVal.length === 4) {
+    const cb = pinCb;
+    if (pinVal === state.settings.pin) { closePin(); if (cb) cb(); }
+    else {
+      pinVal = ''; drawPinDots();
+      const box = $('#pin-box'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+      toast('❌ Yanlış PIN');
+    }
+  }
+}
+drawPinKeys();
+
+function openDetail(html){ $('#detail-box').innerHTML = html; $('#detail-modal').classList.remove('hidden'); }
+function closeDetail(){ $('#detail-modal').classList.add('hidden'); }
+
+/* ---------- Sekme / Navigasyon ---------- */
+const STUDENT_NAV = [
+  { id:'home',     label:'Görevler', icon:'sports_esports' },
+  { id:'dersler',  label:'Dersler',  icon:'menu_book' },
+  { id:'program',  label:'Program',  icon:'calendar_month' },
+  { id:'sinavlar', label:'Sınavlar', icon:'local_fire_department' },
+  { id:'oduller',  label:'Ödüller',  icon:'emoji_events' }
+];
+const PARENT_NAV = [
+  { id:'panel',    label:'Panel',    icon:'shield_person' },
+  { id:'gorev',    label:'Görev Ata',icon:'add_task' },
+  { id:'planla',   label:'Planla',   icon:'swords' },
+  { id:'odulmgr',  label:'Ödül',     icon:'redeem' },
+  { id:'ayarlar',  label:'Ayarlar',  icon:'settings' }
+];
+const VIEW_TITLES = {
+  home:'Görevler', dersler:'Dersler & Ödevler', program:'Haftalık Program', sinavlar:'Sınavlar',
+  oduller:'Ödüller & Başarımlar', panel:'Komutan Paneli', gorev:'Görev Ata', planla:'Sınav & Program Planla',
+  odulmgr:'Ödül Yönetimi', ayarlar:'Ayarlar'
+};
+function switchRole(role){
+  if (role === ui.role) return;
+  if (role === 'parent') {
+    askPin(() => { ui.role = 'parent'; ui.view = 'panel'; saveUI(); renderAll(); toast('🛡️ Komutan Paneli açıldı'); });
+  } else {
+    ui.role = 'student'; ui.view = 'home'; saveUI(); renderAll();
+  }
+}
+function showView(v){
+  ui.view = v; saveUI();
+  renderAll();
+  window.scrollTo({ top: 0 });
+}
+
+/* ---------- Ortak Parçalar ---------- */
+function subjectChip(s){
+  const sub = SUBJECTS[s] || { name: s, icon: 'school' };
+  return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary-container text-[12px] font-extrabold uppercase tracking-tight">' + sub.name + '</span>';
+}
+function xpBadge(xp){
+  return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-tertiary-fixed text-[12px] font-extrabold">+' + xp + ' XP</span>';
+}
+function statusChip(t){
+  if (t.status === 'pending') return '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">hourglass_top</span>Onay Bekliyor</span>';
+  if (t.status === 'completed') return '<span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">verified</span>Tamamlandı</span>';
+  if (isOverdue(t)) return '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">warning</span>Gecikti</span>';
+  return '';
+}
+function taskCard(t, compact){
+  const sub = SUBJECTS[t.subject] || { icon:'school' };
+  const boss = t.difficulty === 'boss';
+  const due = taskDue(t);
+  return '' +
+  '<div class="relative overflow-hidden rounded-lg bg-surface-container p-space-md shadow-[0_4px_0_#070a11]' + (boss ? ' ring-1 ring-secondary-container/40' : '') + '">' +
+    (boss ? '<div class="absolute top-0 right-0 w-28 h-28 bg-secondary-container/10 rounded-full blur-2xl pointer-events-none"></div>' : '') +
+    '<div class="flex items-start justify-between gap-space-sm">' +
+      '<div class="flex gap-2.5 min-w-0">' +
+        '<div class="w-11 h-11 rounded-lg bg-surface-container-high flex items-center justify-center ' + (boss ? 'text-secondary-container shadow-[0_0_12px_rgba(254,107,0,0.35)]' : 'text-primary-container') + ' shrink-0">' +
+          '<span class="material-symbols-outlined text-2xl">' + sub.icon + '</span>' +
+        '</div>' +
+        '<div class="flex flex-col min-w-0">' +
+          '<div class="flex items-center gap-1.5 flex-wrap">' + subjectChip(t.subject) + xpBadge(t.xp) +
+            (boss ? '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold flex items-center gap-0.5"><span class="material-symbols-outlined text-xs">skull</span>BOSS</span>' : '') +
+          '</div>' +
+          '<h4 class="text-[16px] font-bold text-primary mt-1 leading-tight">' + esc(t.title) + '</h4>' +
+          '<p class="text-[12px] font-semibold text-on-surface-variant mt-0.5 line-clamp-2">' + esc(t.desc || '') + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<button onclick="openTaskDetail(\'' + t.id + '\')" class="p-1.5 rounded-full bg-surface-container-high text-outline hover:text-primary-container shrink-0">' +
+        '<span class="material-symbols-outlined text-base">visibility</span>' +
+      '</button>' +
+    '</div>' +
+    '<div class="flex items-center justify-between gap-2 mt-3">' +
+      '<div class="flex items-center gap-1.5 flex-wrap">' + statusChip(t) +
+        '<span class="flex items-center gap-1 text-[12px] font-extrabold ' + (isOverdue(t) ? 'text-error' : 'text-secondary') + '">' +
+          '<span class="material-symbols-outlined text-sm">alarm</span>' + esc(fmtDue(t)) +
+        '</span>' +
+      '</div>' +
+      (t.status === 'active'
+        ? '<button onclick="completeTask(\'' + t.id + '\')" class="flex items-center gap-1.5 py-2 px-4 rounded-full bg-secondary-container text-on-secondary text-[13px] font-extrabold shadow-[0_3px_0_#572000] active:translate-y-0.5 transition-all">' +
+            '<span class="material-symbols-outlined text-base">check_circle</span>Tamamla</button>'
+        : '') +
+    '</div>' +
+  '</div>';
+}
+function openTaskDetail(id){
+  const t = state.tasks.find(x => x.id === id); if (!t) return;
+  const sub = SUBJECTS[t.subject] || { name:t.subject, icon:'school' };
+  const boss = t.difficulty === 'boss';
+  openDetail('' +
+    '<div class="flex flex-col gap-3">' +
+      '<div class="flex items-center gap-3">' +
+        '<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center ' + (boss ? 'text-secondary-container' : 'text-primary-container') + '"><span class="material-symbols-outlined text-2xl">' + sub.icon + '</span></div>' +
+        '<div><span class="text-[12px] font-extrabold uppercase text-on-surface-variant">' + sub.name + (boss ? ' • BOSS GÖREV' : '') + '</span>' +
+        '<h3 class="text-[18px] font-extrabold text-primary leading-tight">' + esc(t.title) + '</h3></div>' +
+      '</div>' +
+      '<p class="text-[14px] font-semibold text-on-surface leading-relaxed bg-surface-container-lowest rounded-lg p-3">' + esc(t.desc || 'Açıklama yok') + '</p>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Ödül</span><p class="text-[15px] font-extrabold text-primary-container">+' + t.xp + ' XP</p></div>' +
+        '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Son Tarih</span><p class="text-[13px] font-extrabold text-on-surface">' + esc(fmtDue(t)) + '</p></div>' +
+      '</div>' +
+      '<div class="flex justify-center">' + statusChip(t) + '</div>' +
+      (t.status === 'active' ? '<button onclick="closeDetail();completeTask(\'' + t.id + '\')" class="btn-orange"><span class="material-symbols-outlined text-base">check_circle</span>Görevi Tamamla</button>' : '') +
+      '<button onclick="closeDetail()" class="btn-ghost">Kapat</button>' +
+    '</div>');
+}
+function nextExam(){
+  const now = new Date();
+  return state.exams
+    .map(e => ({ ...e, dt: new Date(e.date + 'T' + (e.time || '09:30')) }))
+    .filter(e => e.dt >= new Date(now.getTime() - 6 * 36e5))
+    .sort((a, b) => a.dt - b.dt)[0] || null;
+}
+function bossAlarmCard(){
+  const e = nextExam(); if (!e) return '';
+  const days = Math.ceil((e.dt - new Date()) / 864e5);
+  const urgent = days <= (e.alarmDays || 2);
+  const sub = SUBJECTS[e.subject] || { name:'Sınav' };
+  return '' +
+  '<div class="relative overflow-hidden rounded-lg bg-surface-container p-space-md ' + (urgent ? 'animate-boss-pulse' : 'shadow-[0_4px_0_#070a11]') + '">' +
+    '<div class="absolute -right-10 -bottom-10 w-36 h-36 bg-secondary-container/20 rounded-full blur-xl pointer-events-none"></div>' +
+    '<div class="relative z-10 flex flex-col gap-2">' +
+      '<div class="flex items-center justify-between">' +
+        '<div class="flex items-center gap-2">' +
+          '<div class="w-8 h-8 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center"><span class="material-symbols-outlined text-xl" style="font-variation-settings:\'FILL\' 1;">warning</span></div>' +
+          '<span class="text-[12px] font-extrabold uppercase tracking-wider text-secondary-fixed">Acil Sınav Alarmı</span>' +
+        '</div>' +
+        (urgent ? '<span class="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary text-[12px] font-extrabold flex items-center gap-1 animate-pulse"><span class="material-symbols-outlined text-sm">notifications_active</span>AKTİF</span>' : '') +
+      '</div>' +
+      '<h2 class="text-[18px] font-extrabold text-primary">' + esc(e.title) + '</h2>' +
+      '<div class="flex items-center gap-2 flex-wrap">' +
+        '<div class="px-2.5 py-1 rounded bg-surface-container-lowest text-secondary text-[18px] font-extrabold digit-glow" data-cd="' + e.id + '">' + cdText(e.dt - Date.now()) + '</div>' +
+        '<span class="text-[14px] font-semibold text-on-surface-variant">' + esc(fmtExamDT(e)) + '</span>' +
+      '</div>' +
+      '<button onclick="showView(\'sinavlar\')" class="mt-1 btn-orange"><span class="material-symbols-outlined text-xl">event_upcoming</span>Çalışma Planına & Sınavlara Git</button>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ---------- HEADER / NAV ---------- */
+function renderHeader(){
+  const isParent = ui.role === 'parent';
+  $('#header-sub').textContent = VIEW_TITLES[ui.view] || 'Görevler';
+  const lv = levelOf(state.xp);
+  $('#lvl-chip-text').textContent = 'LVL ' + lv.level;
+  $('#lvl-chip').title = 'Toplam ' + nf(state.xp) + ' XP • Seviye ' + lv.level;
+  $('#lvl-chip').style.display = isParent ? 'none' : 'flex';
+  const bs = isParent, ss = !isParent;
+  $('#role-student').className = 'px-2.5 py-1.5 rounded-full text-[12px] font-extrabold transition-all flex items-center gap-1 ' + (ss ? 'bg-primary-container text-on-primary-container shadow-[0_0_12px_rgba(0,255,136,0.4)]' : 'text-on-surface-variant hover:text-on-surface');
+  $('#role-parent').className = 'px-2.5 py-1.5 rounded-full text-[12px] font-extrabold transition-all flex items-center gap-1 ' + (bs ? 'bg-secondary-container text-on-secondary shadow-[0_0_12px_rgba(254,107,0,0.4)]' : 'text-on-surface-variant hover:text-on-surface');
+  setSyncUI();
+}
+function renderNav(){
+  const nav = ui.role === 'parent' ? PARENT_NAV : STUDENT_NAV;
+  $('#bottom-nav').innerHTML = nav.map(n => {
+    const active = ui.view === n.id;
+    const color = n.id === 'sinavlar' ? 'text-secondary-container' : 'text-primary-container';
+    return '<button onclick="showView(\'' + n.id + '\')" class="flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl transition-all">' +
+      '<span class="material-symbols-outlined text-[22px] ' + (active ? color + ' drop-shadow-[0_0_6px_rgba(0,255,136,0.6)]' : 'text-on-surface-variant') + '" style="' + (active ? "font-variation-settings:'FILL' 1;" : '') + '">' + n.icon + '</span>' +
+      '<span class="text-[10px] font-extrabold ' + (active ? 'text-primary' : 'text-on-surface-variant') + '">' + n.label + '</span>' +
+    '</button>';
+  }).join('');
+}
+
+/* ============================================================
+   ÖĞRENCİ EKRANLARI
+   ============================================================ */
+function renderHome(){
+  const lv = levelOf(state.xp);
+  const t0 = todayStr();
+  const today = state.tasks.filter(t => t.status === 'active' && (t.dueDate === t0 || isOverdue(t)));
+  const pending = state.tasks.filter(t => t.status === 'pending');
+  const upcoming = state.tasks.filter(t => t.status === 'active' && t.dueDate > t0 && !isOverdue(t)).sort((a,b) => taskDue(a) - taskDue(b)).slice(0, 4);
+  const activeCount = state.tasks.filter(t => t.status === 'active').length;
+  const ws = weekStats();
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md">' +
+    /* Hero */
+    '<div class="relative overflow-hidden rounded-lg bg-surface-container p-space-md shadow-[0_4px_0_#070a11]">' +
+      '<div class="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-primary-container/10 blur-2xl pointer-events-none"></div>' +
+      '<div class="absolute -left-8 -bottom-8 w-40 h-40 rounded-full bg-secondary-container/10 blur-2xl pointer-events-none"></div>' +
+      '<div class="relative z-10 flex flex-col gap-2">' +
+        '<div class="flex items-center justify-between gap-2">' +
+          '<div class="flex flex-col min-w-0">' +
+            '<span class="text-[18px] font-extrabold text-primary">Selam ' + esc(state.student.nickname || state.student.name) + '! 🚀</span>' +
+            '<span class="text-[12px] font-semibold text-on-surface-variant"><span class="px-1.5 py-0.5 rounded bg-surface-container-high text-tertiary-fixed text-[12px] font-extrabold uppercase mr-1">' + esc(state.student.grade) + '</span> ' + activeCount + ' aktif görevin var</span>' +
+          '</div>' +
+          '<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-lowest shadow-[0_0_16px_rgba(254,107,0,0.35)] shrink-0" style="animation:fireGlow 2s ease-in-out infinite;">' +
+            '<span class="material-symbols-outlined text-secondary-container text-lg" style="font-variation-settings:\'FILL\' 1;">local_fire_department</span>' +
+            '<span class="text-[12px] font-extrabold text-secondary uppercase">' + state.streak + ' Gün Serisi!</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex flex-col gap-1.5 mt-1 bg-surface-container-lowest/80 p-space-sm rounded">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="flex items-center gap-1.5">' +
+              '<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[12px] font-extrabold text-primary-container">LVL ' + lv.level + '</span>' +
+              '<span class="text-[12px] font-semibold text-on-surface-variant">' + esc(lv.title) + '</span>' +
+            '</div>' +
+            '<span class="text-[15px] font-extrabold text-primary-container">' + lv.into + ' / ' + lv.need + ' XP</span>' +
+          '</div>' +
+          '<div class="relative w-full h-3 rounded-full bg-surface-container-high overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]">' +
+            '<div class="h-full rounded-full bg-gradient-to-r from-primary-fixed-dim to-primary-container shadow-[0_0_12px_rgba(0,255,136,0.8)] transition-all duration-500" style="width:' + lv.pct + '%;"></div>' +
+          '</div>' +
+          '<div class="flex justify-between text-[12px] font-semibold text-on-surface-variant"><span>Bu hafta +' + ws.xp + ' XP</span><span>Sonraki seviye için ' + (lv.need - lv.into) + ' XP</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    bossAlarmCard() +
+    /* Bugünün Görevleri */
+    '<div class="flex items-center justify-between pt-1">' +
+      '<div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-container text-xl">sports_score</span>' +
+      '<h3 class="text-[18px] font-bold text-primary">Bugünün Görevleri</h3></div>' +
+      '<span class="px-2.5 py-0.5 rounded-full bg-surface-container-high text-tertiary-fixed text-[12px] font-extrabold">' + (today.length + pending.length) + ' Görev</span>' +
+    '</div>' +
+    '<div class="flex flex-col gap-2.5">' +
+      (pending.length || today.length
+        ? pending.map(t => taskCard(t, true)).join('') + today.map(t => taskCard(t, true)).join('')
+        : '<div class="card flex flex-col items-center gap-2 py-8 text-center"><span class="text-4xl">🎉</span><p class="text-[14px] font-bold text-on-surface">Bugünün görevi yok!</p><p class="text-[12px] font-semibold text-on-surface-variant">Serini korumak için ilerideki görevlere bak</p></div>') +
+    '</div>' +
+    (upcoming.length ? '<div class="flex items-center justify-between pt-2"><h3 class="text-[16px] font-bold text-on-surface">Yaklaşıyor</h3><button onclick="showView(\'dersler\')" class="text-[12px] font-extrabold text-primary-container">TÜMÜ →</button></div>' +
+    '<div class="flex flex-col gap-2.5">' + upcoming.map(t => taskCard(t, true)).join('') + '</div>' : '') +
+  '</div>';
+}
+
+/* ---- Dersler ---- */
+let derSearch = '', derSubject = 'all', derTab = 'active';
+function renderDersler(){
+  const subjects = ['all'].concat(Object.keys(SUBJECTS));
+  const chips = subjects.map(s => {
+    const on = derSubject === s;
+    const sub = s === 'all' ? { name:'TÜMÜ', icon:'military_tech' } : SUBJECTS[s];
+    return '<button onclick="derSubject=\'' + s + '\';renderDersler()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-extrabold whitespace-nowrap transition-all ' +
+      (on ? 'bg-primary-container text-on-primary-container shadow-[0_3px_0_#007139]' : 'bg-surface-container-high text-on-surface-variant shadow-[0_3px_0_#0a0e18]') + '">' +
+      '<span class="material-symbols-outlined text-sm">' + sub.icon + '</span>' + sub.name + '</button>';
+  }).join('');
+  const q = derSearch.toLowerCase();
+  let list = state.tasks.filter(t => (derSubject === 'all' || t.subject === derSubject) && (!q || (t.title + ' ' + t.desc).toLowerCase().includes(q)));
+  const active = list.filter(t => t.status === 'active' || t.status === 'pending').sort((a,b) => taskDue(a) - taskDue(b));
+  const done = list.filter(t => t.status === 'completed').sort((a,b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+  const showList = derTab === 'active' ? active : done;
+  const activeCount = state.tasks.filter(t => t.status === 'active' || t.status === 'pending').length;
+  const doneCountAll = state.tasks.filter(t => t.status === 'completed').length;
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
+    '<div class="relative">' +
+      '<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none"><span class="material-symbols-outlined text-xl">search</span></div>' +
+      '<input id="der-search" class="inp pl-11" placeholder="Görev veya ders ara..." value="' + esc(derSearch) + '" oninput="derSearch=this.value;renderDersler();document.getElementById(\'der-search\').focus()">' +
+    '</div>' +
+    '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-gutter px-gutter">' + chips + '</div>' +
+    '<div class="grid grid-cols-2 p-1 bg-surface-container-lowest rounded-full shadow-[inset_0_2px_5px_rgba(0,0,0,0.6)]">' +
+      '<button onclick="derTab=\'active\';renderDersler()" class="flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-extrabold transition-all ' + (derTab === 'active' ? 'bg-surface-container text-secondary shadow-[0_3px_0_#070a11]' : 'text-on-surface-variant') + '">' +
+        '<span class="material-symbols-outlined text-base ' + (derTab === 'active' ? 'text-secondary-container' : '') + '">local_fire_department</span>DEVAM EDENLER (' + activeCount + ')</button>' +
+      '<button onclick="derTab=\'done\';renderDersler()" class="flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-extrabold transition-all ' + (derTab === 'done' ? 'bg-surface-container text-primary-container shadow-[0_3px_0_#070a11]' : 'text-on-surface-variant') + '">' +
+        '<span class="material-symbols-outlined text-base">verified</span>TAMAMLANANLAR (' + doneCountAll + ')</button>' +
+    '</div>' +
+    '<div class="flex flex-col gap-2.5">' +
+      (showList.length ? showList.map(t => taskCard(t)).join('')
+        : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : 'Tamamlanan görev yok') + '</p></div>') +
+    '</div>' +
+  '</div>';
+  const inp = $('#der-search');
+  if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+
+/* ---- Program ---- */
+let progDay = wIdx(new Date()), progFilter = 'all';
+function renderProgram(){
+  const monday = addDays(-wIdx(new Date()));
+  const days = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(monday); d.setDate(monday.getDate() + i); days.push(d); }
+  const todayIdx = wIdx(new Date());
+  const chips = days.map((d, i) => {
+    const on = progDay === i;
+    const isToday = i === todayIdx;
+    return '<button onclick="progDay=' + i + ';renderProgram()" class="flex flex-col items-center justify-center min-w-[54px] py-2 px-1.5 rounded-2xl transition-all ' +
+      (on ? 'bg-primary-container text-on-primary-container shadow-[0_4px_0_#007139,0_0_16px_rgba(0,255,136,0.4)] -translate-y-0.5' : 'bg-surface-container-high text-on-surface-variant shadow-[0_4px_0_#0a0e18]') + '">' +
+      '<span class="text-[11px] font-extrabold">' + (isToday ? 'BUGÜN' : WEEK_ABBR[i]) + '</span>' +
+      '<span class="text-[15px] font-extrabold mt-0.5">' + d.getDate() + '</span></button>';
+  }).join('');
+  let items = state.schedule.filter(s => s.day === progDay && (progFilter === 'all' || s.type === progFilter)).sort((a,b) => a.start.localeCompare(b.start));
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const toMin = hhmm => (+hhmm.split(':')[0]) * 60 + (+hhmm.split(':')[1]);
+  let nowItem = null, nextItem = null;
+  items.forEach(it => { const s = toMin(it.start), e = toMin(it.end); if (nowMin >= s && nowMin < e) nowItem = it; else if (s > nowMin && !nextItem) nextItem = it; });
+  const fullDay = state.schedule.filter(s => s.day === progDay).sort((a,b) => a.start.localeCompare(b.start));
+  const nowFull = fullDay.find(it => nowMin >= toMin(it.start) && nowMin < toMin(it.end));
+  const nextFull = fullDay.find(it => toMin(it.start) > nowMin);
+  const radar = '' +
+    '<div class="flex items-center gap-2.5 bg-surface-container-lowest/80 p-2.5 rounded-xl shadow-inner">' +
+      '<div class="relative flex items-center justify-center w-3.5 h-3.5 shrink-0">' +
+        '<span class="absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75 animate-ping"></span>' +
+        '<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-container shadow-[0_0_8px_#00ff88]"></span>' +
+      '</div>' +
+      '<div class="flex-1 min-w-0">' +
+        '<p class="text-[12px] font-extrabold text-primary-fixed truncate">ŞU AN: <span class="text-primary">' + (nowFull ? esc(nowFull.title) + ' (' + esc(nowFull.place || '') + ')' : (progDay === 5 || progDay === 6 ? 'Hafta Sonu — Serbest Zaman' : 'Serbest Zaman / Ders Çalışma')) + '</span></p>' +
+        '<p class="text-[12px] font-semibold text-on-surface-variant truncate">Sonraki: ' + (nextFull ? esc(nextFull.start + ' ' + nextFull.title + ' (' + (nextFull.place || '') + ')') : 'Bugün planlanmış etkinlik yok') + '</p>' +
+      '</div>' +
+      '<div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface-container-high text-tertiary-fixed text-[15px] font-extrabold" id="clock-now">' +
+        '<span class="material-symbols-outlined text-sm">schedule</span><span>' + new Date().toTimeString().slice(0,5) + '</span>' +
+      '</div>' +
+    '</div>';
+  const rows = items.length ? items.map(it => {
+    const isNow = nowItem && nowItem.id === it.id;
+    const school = it.type === 'school';
+    return '<div class="relative flex gap-3">' +
+      '<div class="flex flex-col items-center pt-4"><span class="text-[15px] font-extrabold ' + (isNow ? 'text-primary-container' : 'text-on-surface') + '">' + it.start + '</span><div class="w-0.5 flex-1 my-1 rounded ' + (isNow ? 'bg-primary-container shadow-[0_0_8px_#00ff88]' : 'bg-surface-container-highest') + '"></div><span class="text-[12px] font-semibold text-on-surface-variant pb-4">' + it.end + '</span></div>' +
+      '<div class="flex-1 card mb-1 ' + (isNow ? 'ring-1 ring-primary-container/60 shadow-[0_0_18px_rgba(0,255,136,0.15)]' : '') + '">' +
+        '<div class="flex items-center justify-between gap-2">' +
+          '<div class="flex items-center gap-2 min-w-0">' +
+            '<div class="w-9 h-9 rounded-lg ' + (school ? 'bg-tertiary-container/20 text-tertiary-fixed-dim' : 'bg-secondary-container/20 text-secondary-container') + ' flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-xl">' + (school ? 'school' : 'sports_kabaddi') + '</span></div>' +
+            '<div class="min-w-0"><p class="text-[15px] font-extrabold text-on-surface truncate">' + esc(it.title) + '</p><p class="text-[12px] font-semibold text-on-surface-variant truncate">' + esc(it.place || '') + '</p></div>' +
+          '</div>' +
+          (isNow ? '<span class="px-2 py-0.5 rounded-full bg-primary-container text-on-primary-container text-[10px] font-extrabold shrink-0">ŞİMDİ</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('') : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">event_busy</span><p class="text-[14px] font-bold text-on-surface">' + (progDay === 5 || progDay === 6 ? 'Hafta sonu — planlanmış ders yok 🎮' : 'Bu gün için program yok') + '</p></div>';
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
+    '<div class="card">' +
+      '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-container via-tertiary-fixed-dim to-secondary-container"></div>' +
+      '<div class="flex items-start justify-between gap-2 mb-3 pt-1">' +
+        '<div><p class="text-[18px] font-extrabold text-primary">Orario Settimanale — Haftalık Program</p><p class="text-[12px] font-semibold text-on-surface-variant">' + esc(state.student.name) + ' • ' + esc(state.student.grade) + ' • Okul: 08:00-13:50</p></div>' +
+      '</div>' + radar +
+    '</div>' +
+    '<div class="grid grid-cols-3 gap-1.5 p-1 bg-surface-container-lowest rounded-full shadow-[0_4px_0_#070a11]">' +
+      [['all','TÜMÜ'],['school','OKUL DERSLERİ'],['course','KURS & ETÜT']].map(f =>
+        '<button onclick="progFilter=\'' + f[0] + '\';renderProgram()" class="py-2 rounded-full text-[12px] font-extrabold transition-all ' + (progFilter === f[0] ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">' + f[1] + '</button>'
+      ).join('') +
+    '</div>' +
+    '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-gutter px-gutter py-1">' + chips + '</div>' +
+    '<div class="flex flex-col">' + rows + '</div>' +
+  '</div>';
+}
+
+/* ---- Sınavlar ---- */
+function renderSinavlar(){
+  const now = new Date();
+  const exams = state.exams.map(e => ({ ...e, dt: new Date(e.date + 'T' + (e.time || '09:30')) })).sort((a,b) => a.dt - b.dt);
+  const up = exams.filter(e => e.dt >= now);
+  const past = exams.filter(e => e.dt < now).reverse();
+  const next = up[0];
+  let hero = '';
+  if (next) {
+    const days = Math.ceil((next.dt - now) / 864e5);
+    const sub = SUBJECTS[next.subject] || { name:'Sınav' };
+    hero = '<div class="relative rounded-lg bg-surface-container p-space-md flex flex-col gap-2 ' + (days <= (next.alarmDays || 2) ? 'animate-boss-pulse' : 'shadow-[0_4px_0_#070a11]') + '">' +
+      '<div class="flex items-center justify-between gap-2">' +
+        '<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-white shadow-[0_0_12px_rgba(254,107,0,0.6)]">' +
+          '<span class="material-symbols-outlined text-base animate-bounce" style="font-variation-settings:\'FILL\' 1;">warning</span>' +
+          '<span class="text-[12px] font-extrabold uppercase">En Yakın Boss Savaşı</span></div>' +
+        '<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-secondary-fixed text-[15px] font-extrabold"><span class="material-symbols-outlined text-sm">schedule</span>' + esc(fmtExamDT(next)) + '</div>' +
+      '</div>' +
+      '<h2 class="text-[22px] font-extrabold text-primary leading-tight">' + esc(next.title) + '</h2>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">' + sub.name + (next.note ? ' • ' + esc(next.note) : '') + '</p>' +
+      '<div class="grid grid-cols-4 gap-1.5 mt-1" data-cd-box="' + next.id + '">' +
+        [['GÜN','d'],['SAAT','h'],['DAKİKA','m'],['SANİYE','s']].map(u => {
+          const ms = next.dt - Date.now();
+          const d = Math.max(0, Math.floor(ms/864e5)), h = Math.max(0, Math.floor(ms%864e5/36e5)), m = Math.max(0, Math.floor(ms%36e5/6e4)), s = Math.max(0, Math.floor(ms%6e4/1e3));
+          const v = { d, h, m, s }[u[1]];
+          return '<div class="flex flex-col items-center py-2 rounded-lg bg-surface-container-lowest shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)]"><span class="text-[22px] font-extrabold text-primary-container digit-glow" data-cd-u="' + u[1] + '">' + String(v).padStart(2,'0') + '</span><span class="text-[10px] font-extrabold text-on-surface-variant">' + u[0] + '</span></div>';
+        }).join('') +
+      '</div>' +
+      (days <= (next.alarmDays || 2) ? '<div class="flex items-center gap-1.5 text-[12px] font-extrabold text-secondary mt-1"><span class="material-symbols-outlined text-base animate-alert-beacon">notifications_active</span>' + days + ' gün kaldı — Boss Alarmı aktif!</div>' : '') +
+    '</div>';
+  }
+  const examRow = e => {
+    const sub = SUBJECTS[e.subject] || { name:'Sınav', icon:'school' };
+    const days = Math.ceil((e.dt - now) / 864e5);
+    return '<div class="card flex items-center gap-3">' +
+      '<div class="w-11 h-11 rounded-lg bg-surface-container-high flex flex-col items-center justify-center shrink-0"><span class="text-[15px] font-extrabold text-primary leading-none">' + new Date(e.date + 'T00:00:00').getDate() + '</span><span class="text-[10px] font-extrabold text-on-surface-variant uppercase">' + MONTHS_ABBR[new Date(e.date + 'T00:00:00').getMonth()] + '</span></div>' +
+      '<div class="flex-1 min-w-0"><p class="text-[15px] font-bold text-primary truncate">' + esc(e.title) + '</p>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant truncate">' + sub.name + ' • ' + esc(e.time || '09:30') + (e.note ? ' • ' + esc(e.note) : '') + '</p></div>' +
+      '<div class="text-right shrink-0">' +
+        (e.dt >= now
+          ? '<span class="text-[12px] font-extrabold ' + (days <= 2 ? 'text-secondary' : 'text-tertiary-fixed-dim') + '">' + (days === 0 ? 'BUGÜN!' : days + ' gün') + '</span>' +
+            '<p class="text-[11px] font-semibold text-on-surface-variant" data-cd="' + e.id + '">' + cdText(e.dt - Date.now()) + '</p>'
+          : '<span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[10px] font-extrabold">GEÇTİ</span>') +
+      '</div>' +
+    '</div>';
+  };
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
+    '<div class="relative overflow-hidden rounded-lg bg-surface-container-high p-space-md shadow-[0_4px_20px_rgba(0,255,136,0.12)]">' +
+      '<div class="flex items-center gap-3">' +
+        '<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container shadow-[0_0_12px_rgba(0,255,136,0.35)] animate-pulse"><span class="material-symbols-outlined text-2xl" style="font-variation-settings:\'FILL\' 1;">notifications_active</span></div>' +
+        '<div class="flex-1 min-w-0">' +
+          '<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-container shadow-[0_0_8px_rgba(0,255,136,0.9)]"></span><span class="text-[12px] font-extrabold text-primary-container uppercase">Akıllı Radar</span></div>' +
+          '<p class="text-[12px] font-semibold text-on-surface mt-0.5">Sınavlardan <span class="text-primary-container font-extrabold">2 gün önceden</span> sesli & görsel Boss Alarmı kurulur.</p>' +
+        '</div>' +
+      '</div>' +
+      (state.settings.notify && ('Notification' in window) && Notification.permission === 'granted'
+        ? ''
+        : '<button onclick="askNotify()" class="btn-ghost mt-3"><span class="material-symbols-outlined text-base">notifications</span>Bildirim İzinini Aç</button>') +
+    '</div>' +
+    hero +
+    (up.length ? '<h3 class="text-[16px] font-bold text-on-surface pt-1">Yaklaşan Sınavlar (' + up.length + ')</h3><div class="flex flex-col gap-2.5">' + up.map(examRow).join('') + '</div>' : '<div class="card py-8 text-center"><span class="text-4xl">🗓️</span><p class="text-[14px] font-bold text-on-surface mt-2">Planlanmış sınav yok</p><p class="text-[12px] font-semibold text-on-surface-variant">Sınavlar veli panelinden planlanır</p></div>') +
+    (past.length ? '<h3 class="text-[16px] font-bold text-on-surface-variant pt-2">Geçmiş Sınavlar</h3><div class="flex flex-col gap-2.5 opacity-70">' + past.map(examRow).join('') + '</div>' : '') +
+  '</div>';
+}
+
+/* ---- Ödüller ---- */
+function renderOduller(){
+  const lv = levelOf(state.xp);
+  const ws = weekStats();
+  const badgesHtml = BADGES.map(b => {
+    const un = !!state.badges[b.id];
+    return '<div class="rounded-lg p-2.5 flex flex-col items-center gap-1 text-center ' + (un ? 'bg-surface-container shadow-[0_3px_0_#0a0e18,0_0_14px_rgba(0,255,136,0.15)] ring-1 ring-primary-container/40' : 'bg-surface-container-lowest opacity-45') + '">' +
+      '<span class="material-symbols-outlined text-2xl ' + (un ? 'text-secondary-container' : 'text-outline-variant') + '" style="' + (un ? "font-variation-settings:'FILL' 1;" : '') + '">' + b.icon + '</span>' +
+      '<span class="text-[11px] font-extrabold ' + (un ? 'text-primary' : 'text-on-surface-variant') + '">' + b.name + '</span>' +
+      '<span class="text-[10px] font-semibold text-on-surface-variant leading-tight">' + b.desc + '</span>' +
+    '</div>';
+  }).join('');
+  const store = state.rewards.filter(r => r.active !== false);
+  const storeHtml = store.length ? store.map(r => {
+    const can = state.xp >= r.cost;
+    return '<div class="card flex items-center gap-3">' +
+      '<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-2xl shrink-0">' + (r.icon || '🎁') + '</div>' +
+      '<div class="flex-1 min-w-0"><p class="text-[15px] font-bold text-primary truncate">' + esc(r.title) + '</p>' +
+      '<p class="text-[12px] font-extrabold text-tertiary-fixed">' + nf(r.cost) + ' XP</p></div>' +
+      (can
+        ? '<button onclick="redeemReward(\'' + r.id + '\')" class="flex items-center gap-1 py-2 px-3.5 rounded-full bg-secondary-container text-on-secondary text-[12px] font-extrabold shadow-[0_3px_0_#572000] active:translate-y-0.5 transition-all shrink-0"><span class="material-symbols-outlined text-base">redeem</span>Takas Et</button>'
+        : '<div class="flex flex-col items-end shrink-0"><span class="text-[11px] font-extrabold text-error">' + nf(r.cost - state.xp) + ' XP kaldı</span><div class="w-20 h-1.5 rounded-full bg-surface-container-highest mt-1 overflow-hidden"><div class="h-full bg-primary-container" style="width:' + Math.min(100, Math.round(state.xp / r.cost * 100)) + '%"></div></div></div>') +
+    '</div>';
+  }).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Ödül mağazası henüz boş — Komutanın ödül eklemesi gerekiyor.</div>';
+  const redemptions = state.redemptions.slice().reverse();
+  const redHtml = redemptions.length ? redemptions.map(r => {
+    const st = r.status === 'pending' ? '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold">ONAY BEKLİYOR</span>'
+      : r.status === 'approved' ? '<span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[10px] font-extrabold">KAZANILDI ✓</span>'
+      : '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold">İPTAL (XP iade)</span>';
+    return '<div class="flex items-center justify-between gap-2 py-2 border-b border-surface-container-highest/50 last:border-0">' +
+      '<div class="min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + (r.icon || '🎁') + ' ' + esc(r.title) + '</p><p class="text-[11px] font-semibold text-on-surface-variant">' + esc(r.date) + ' • -' + nf(r.cost) + ' XP</p></div>' + st + '</div>';
+  }).join('') : '';
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
+    /* Karakter vitrini */
+    '<div class="relative overflow-hidden rounded-lg bg-surface-container-high p-space-md shadow-[0_8px_0_#0a0e18,0_0_24px_rgba(0,255,136,0.12)]">' +
+      '<div class="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-primary-container/10 blur-3xl pointer-events-none"></div>' +
+      '<div class="relative z-10 flex flex-col gap-3">' +
+        '<div class="flex items-center gap-3">' +
+          '<div class="relative shrink-0">' +
+            '<div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary-container/30 to-tertiary-fixed-dim/30 p-0.5 shadow-[0_0_16px_rgba(0,255,136,0.35)]"><div class="w-full h-full rounded-full bg-surface-container flex items-center justify-center text-3xl">🚀</div></div>' +
+            '<div class="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-secondary-container shadow-[0_2px_0_#7a3000]"><span class="text-[12px] font-extrabold text-on-secondary">LVL ' + lv.level + '</span></div>' +
+          '</div>' +
+          '<div class="flex flex-col min-w-0">' +
+            '<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-base">verified</span><span class="text-[18px] font-extrabold text-primary truncate">' + esc(lv.title) + '</span></div>' +
+            '<p class="text-[12px] font-semibold text-on-surface-variant truncate">' + esc(state.student.name) + ' • Efsanevi Ödev Avcısı</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex flex-col gap-1.5 bg-surface-container-lowest/80 rounded p-2.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">' +
+          '<div class="flex justify-between items-center"><span class="text-[12px] font-extrabold uppercase text-primary-container flex items-center gap-1"><span class="material-symbols-outlined text-sm">stars</span>Deneyim</span>' +
+          '<span class="text-[15px] font-extrabold text-tertiary-fixed">' + nf(state.xp) + ' <span class="text-[12px] font-semibold text-on-surface-variant">XP</span></span></div>' +
+          '<div class="relative w-full h-4 bg-surface-container rounded-full overflow-hidden p-0.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">' +
+            '<div class="h-full rounded-full bg-gradient-to-r from-primary-fixed-dim via-primary-container to-tertiary-fixed-dim shadow-[0_0_12px_rgba(0,255,136,0.6)] flex items-center justify-end transition-all duration-500" style="width:' + Math.max(4, lv.pct) + '%;">' +
+              '<div class="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_#fff] mr-0.5 animate-pulse"></div></div></div>' +
+          '<div class="flex justify-between text-[12px] font-semibold text-on-surface-variant"><span class="flex items-center gap-1 text-tertiary-fixed-dim"><span class="material-symbols-outlined text-xs">keyboard_double_arrow_up</span>Seviye ' + (lv.level + 1) + ' yakın!</span><span>' + (lv.need - lv.into) + ' XP kaldı</span></div>' +
+        '</div>' +
+        '<div class="grid grid-cols-3 gap-2">' +
+          '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-primary-container text-xl mb-0.5">task_alt</span><span class="text-[18px] font-extrabold text-primary leading-none">' + ws.n + '</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">HAFTALIK GÖREV</span></div>' +
+          '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-secondary-container text-xl mb-0.5">bolt</span><span class="text-[18px] font-extrabold text-primary leading-none">+' + nf(ws.xp) + '</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">HAFTALIK XP</span></div>' +
+          '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-tertiary-fixed-dim text-xl mb-0.5">local_fire_department</span><span class="text-[18px] font-extrabold text-primary leading-none">' + state.streak + '</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">GÜN SERİ</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    /* Rozetler */
+    '<div class="flex flex-col gap-2">' +
+      '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-xl">workspace_premium</span>Rozet Koleksiyonu</h3>' +
+      '<div class="grid grid-cols-4 gap-2">' + badgesHtml + '</div>' +
+    '</div>' +
+    /* Ödül mağazası */
+    '<div class="flex flex-col gap-2">' +
+      '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">storefront</span>Ganimet Mağazası</h3>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">XP\'lerini gerçek ödüllerle takas et — Komutanın onaylar 🛡️</p>' +
+      '<div class="flex flex-col gap-2.5">' + storeHtml + '</div>' +
+    '</div>' +
+    (redHtml ? '<div class="card"><h4 class="text-[14px] font-bold text-on-surface mb-1">Takas Geçmişi</h4>' + redHtml + '</div>' : '') +
+  '</div>';
+}
+function redeemReward(id){
+  const r = state.rewards.find(x => x.id === id); if (!r) return;
+  if (state.xp < r.cost) { toast('Yetersiz XP!'); return; }
+  askConfirm('Ödülü takas et', '"' + r.title + '" için ' + nf(r.cost) + ' XP harcanacak ve Komutanın onayına gönderilecek. Onaylanmazsa XP iade edilir.', () => {
+    state.xp -= r.cost;
+    state.redemptions.push({ id: uid(), rewardId: r.id, title: r.title, icon: r.icon, cost: r.cost, status: 'pending', date: todayStr() });
+    checkBadges(); save(); renderAll();
+    toast('🎁 Takas talebi gönderildi! Komutan onayı bekleniyor.');
+    beep(true);
+  }, 'Takas Et');
+}
+
+/* ============================================================
+   VELİ (KOMUTAN) EKRANLARI
+   ============================================================ */
+function pendingTasks(){ return state.tasks.filter(t => t.status === 'pending'); }
+function pendingRedemptions(){ return state.redemptions.filter(r => r.status === 'pending'); }
+
+function renderPanel(){
+  const pt = pendingTasks(), pr = pendingRedemptions();
+  const activeCount = state.tasks.filter(t => t.status === 'active').length;
+  const ws = weekStats();
+  const approvalCard = (kind, item) => {
+    const isTask = kind === 'task';
+    const title = isTask ? item.title : item.title;
+    const meta = isTask ? (SUBJECTS[item.subject] || {}).name + ' • +' + item.xp + ' XP • ' + esc(fmtDue(item)) : item.icon + ' • -' + nf(item.cost) + ' XP';
+    return '<div class="card flex flex-col gap-2">' +
+      '<div class="flex items-start justify-between gap-2">' +
+        '<div class="min-w-0"><p class="text-[15px] font-extrabold text-primary truncate">' + esc(title) + '</p>' +
+        '<p class="text-[12px] font-semibold text-on-surface-variant">' + esc(meta) + '</p></div>' +
+        '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold shrink-0">' + (isTask ? 'GÖREV' : 'ÖDÜL') + '</span>' +
+      '</div>' +
+      (isTask && item.desc ? '<p class="text-[12px] font-semibold text-on-surface-variant bg-surface-container-lowest rounded p-2">' + esc(item.desc) + '</p>' : '') +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<button onclick="approveTask(\'' + item.id + '\')" class="btn-green !py-2 text-[13px]"><span class="material-symbols-outlined text-base">check</span>Onayla</button>' +
+        '<button onclick="rejectTask(\'' + item.id + '\')" class="btn-ghost !py-2 text-[13px] text-error"><span class="material-symbols-outlined text-base">close</span>Reddet</button>' +
+      '</div>' +
+    '</div>';
+  };
+  const tplRow = TEMPLATES.map((tp, i) =>
+    '<button onclick="applyTemplate(' + i + ')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface text-[12px] font-semibold flex items-center gap-1.5 active:scale-95 transition-all">' + (SUBJECTS[tp.s] ? SUBJECTS[tp.s].icon + ' ' : '') + tp.t + ' (+' + tp.xp + ')</button>'
+  ).join('');
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
+    '<div class="relative overflow-hidden rounded-lg bg-surface-container-low p-space-md shadow-lg">' +
+      '<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary-container/10 rounded-full blur-2xl pointer-events-none"></div>' +
+      '<div class="flex items-start justify-between gap-2 relative z-10">' +
+        '<div class="flex flex-col gap-1 min-w-0">' +
+          '<span class="inline-flex items-center gap-1.5 self-start px-2 py-0.5 rounded-full bg-surface-container-high text-primary-fixed-dim text-[12px] font-extrabold uppercase"><span class="material-symbols-outlined text-sm">shield_person</span>Görev Emri Odası</span>' +
+          '<h1 class="text-[22px] font-extrabold text-on-surface mt-1">' + esc(state.student.name) + ' İçin Görev Hazırla</h1>' +
+          '<p class="text-[12px] font-semibold text-on-surface-variant flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>' + activeCount + ' aktif görev • ' + state.streak + ' gün seri 🔥 • Bu hafta +' + ws.xp + ' XP</p>' +
+        '</div>' +
+        '<div class="shrink-0 flex flex-col items-center justify-center p-2 rounded-lg bg-surface-container text-center min-w-[64px]">' +
+          '<span class="text-[12px] font-extrabold text-tertiary-fixed">SERİ</span>' +
+          '<span class="text-[18px] font-extrabold text-secondary-container leading-none my-0.5">' + state.streak + '</span>' +
+          '<span class="text-[10px] font-semibold text-on-surface-variant">gün 🔥</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mt-3 pt-3 flex flex-col gap-2 relative z-10 border-t-0">' +
+        '<span class="text-[12px] font-extrabold text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-sm text-primary-fixed-dim">bolt</span>HIZLI GÖREV ŞABLONLARI</span>' +
+        '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">' + tplRow + '</div>' +
+      '</div>' +
+    '</div>' +
+    /* Onaylar */
+    '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md">' +
+      '<div class="flex items-center justify-between">' +
+        '<div class="flex items-center gap-2"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-container text-on-primary"><span class="material-symbols-outlined text-lg">verified</span></span>' +
+        '<span class="text-[18px] font-bold text-on-surface">Onay Bekleyenler</span></div>' +
+        (pt.length + pr.length ? '<span class="px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary text-[12px] font-extrabold animate-bounce">' + (pt.length + pr.length) + '</span>' : '<span class="text-[12px] font-extrabold text-primary-container">✓ TEMİZ</span>') +
+      '</div>' +
+      (pt.length + pr.length
+        ? '<div class="flex flex-col gap-2.5">' + pt.map(t => approvalCard('task', t)).join('') + pr.map(r => approvalCard('reward', r)).join('') + '</div>'
+        : '<p class="text-[13px] font-semibold text-on-surface-variant">Bekleyen onay yok. ' + esc(state.student.nickname) + ' görev tamamladığında burada görünecek.</p>') +
+    '</div>' +
+    /* Hızlı erişim */
+    '<div class="grid grid-cols-3 gap-2">' +
+      '<button onclick="showView(\'gorev\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-3xl">add_task</span><span class="text-[12px] font-extrabold text-on-surface">Görev Ata</span></button>' +
+      '<button onclick="showView(\'planla\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-tertiary-fixed-dim text-3xl">swords</span><span class="text-[12px] font-extrabold text-on-surface">Sınav Planla</span></button>' +
+      '<button onclick="showView(\'odulmgr\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-3xl">redeem</span><span class="text-[12px] font-extrabold text-on-surface">Ödüller</span></button>' +
+    '</div>' +
+    /* Durum özeti */
+    '<div class="card"><h4 class="text-[14px] font-bold text-on-surface mb-2 flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-lg">monitoring</span>Son 7 Gün Özeti</h4>' +
+      '<div class="flex items-end gap-1.5 h-28">' + weekBars() + '</div>' +
+    '</div>' +
+  '</div>';
+}
+function weekBars(){
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = addDays(-i);
+    const h = state.history.find(x => x.d === ymd(d));
+    days.push({ lbl: WEEK_ABBR[wIdx(d)], xp: h ? h.xp : 0, n: h ? h.n : 0 });
+  }
+  const max = Math.max(50, ...days.map(d => d.xp));
+  return days.map(d =>
+    '<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end">' +
+      '<span class="text-[9px] font-extrabold text-tertiary-fixed-dim">' + (d.xp || '') + '</span>' +
+      '<div class="w-full rounded-t-md ' + (d.xp ? 'bg-gradient-to-t from-primary-fixed-dim to-primary-container shadow-[0_0_8px_rgba(0,255,136,0.5)]' : 'bg-surface-container-highest') + '" style="height:' + Math.max(4, Math.round(d.xp / max * 100)) + '%;"></div>' +
+      '<span class="text-[9px] font-extrabold text-on-surface-variant">' + d.lbl + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+/* ---- Görev Ata ---- */
+let tfSub = 'mat', tfDiff = 'normal';
+function renderGorev(){
+  const active = state.tasks.filter(t => t.status === 'active' || t.status === 'pending').sort((a,b) => taskDue(a) - taskDue(b));
+  const t0 = todayStr();
+  const subBtns = Object.keys(SUBJECTS).map(s =>
+    '<button onclick="tfSub=\'' + s + '\';renderGorev()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
+    (tfSub === s ? 'bg-primary-container text-on-primary-container shadow-[0_4px_0_#007139]' : 'bg-surface-container-highest text-on-surface shadow-[0_4px_0_#171b26]') + '">' +
+    '<span class="material-symbols-outlined text-lg">' + SUBJECTS[s].icon + '</span>' + SUBJECTS[s].name + '</button>'
+  ).join('');
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
+    '<div class="card flex flex-col gap-3">' +
+      '<h2 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">add_task</span>Yeni Görev (Quest) Oluştur</h2>' +
+      '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">title</span>Görev Adı *</label><input id="tf-title" class="inp" placeholder="Örn: Cebirsel İfadeler Testi"></div>' +
+      '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">description</span>Açıklama</label><textarea id="tf-desc" class="inp min-h-[70px] resize-none" placeholder="Görev detayları, sayfa aralığı, beklenen çıktı..."></textarea></div>' +
+      '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">school</span>Ders</label><div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">' + subBtns + '</div></div>' +
+      '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">bolt</span>Zorluk & XP</label>' +
+        '<div class="grid grid-cols-2 gap-2">' +
+          '<button onclick="tfDiff=\'normal\';renderGorev()" class="py-2.5 rounded-lg text-[13px] font-extrabold transition-all ' + (tfDiff === 'normal' ? 'bg-tertiary-container text-on-tertiary-container ring-2 ring-tertiary-fixed-dim' : 'bg-surface-container-highest text-on-surface-variant') + '">⚡ NORMAL (50-250 XP)</button>' +
+          '<button onclick="tfDiff=\'boss\';renderGorev()" class="py-2.5 rounded-lg text-[13px] font-extrabold transition-all ' + (tfDiff === 'boss' ? 'bg-error-container text-on-error-container ring-2 ring-secondary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">💀 BOSS (300+ XP)</button>' +
+        '</div>' +
+        '<div class="flex items-center gap-2 mt-2"><span class="text-[12px] font-extrabold text-on-surface-variant">XP:</span>' +
+          '<input id="tf-xp" type="number" min="10" max="5000" step="10" value="' + (tfDiff === 'boss' ? 350 : 100) + '" class="inp !w-28">' +
+          '<input id="tf-date" type="date" value="' + t0 + '" class="inp flex-1">' +
+          '<input id="tf-time" type="time" value="21:00" class="inp !w-24">' +
+        '</div>' +
+      '</div>' +
+      '<button onclick="submitTask()" class="btn-orange"><span class="material-symbols-outlined">rocket_launch</span>Görevi Yayınla — ' + esc(state.student.nickname) + '\'nin Ekranına Düşsün!</button>' +
+    '</div>' +
+    '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">format_list_bulleted</span>Aktif Görevler (' + active.length + ')</h3>' +
+    '<div class="flex flex-col gap-2.5">' +
+      (active.length ? active.map(t =>
+        '<div class="card">' + taskCard(t) +
+        '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
+      ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') +
+    '</div>' +
+  '</div>';
+}
+function applyTemplate(i){
+  const tp = TEMPLATES[i];
+  ui.role = 'parent'; ui.view = 'gorev'; saveUI();
+  tfSub = tp.s; tfDiff = tp.diff;
+  renderGorev();
+  setTimeout(() => {
+    const a = $('#tf-title'), b = $('#tf-desc'), c = $('#tf-xp');
+    if (a) a.value = tp.t; if (b) b.value = tp.d; if (c) c.value = tp.xp;
+  }, 50);
+  toast('Şablon yüklendi: ' + tp.t);
+}
+function submitTask(){
+  const title = $('#tf-title').value.trim();
+  if (!title) { toast('⚠️ Görev adı gerekli!'); $('#tf-title').classList.add('shake'); setTimeout(() => $('#tf-title').classList.remove('shake'), 500); return; }
+  const desc = $('#tf-desc').value.trim();
+  const xp = Math.max(10, Math.min(5000, parseInt($('#tf-xp').value) || 100));
+  const date = $('#tf-date').value || todayStr();
+  const time = $('#tf-time').value || '21:00';
+  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, createdAt: todayStr(), dueDate: date, dueTime: time, status: 'active' });
+  save(); renderGorev();
+  toast('⚔️ Görev yayınlandı! ' + (state.student.nickname || '') + ' ekranında görünecek.');
+  beep(true);
+}
+function deleteTask(id){
+  askConfirm('Görevi sil', 'Bu görev kalıcı olarak silinecek. Emin misin?', () => {
+    state.tasks = state.tasks.filter(t => t.id !== id);
+    save(); renderGorev(); toast('Görev silindi');
+  }, 'Sil');
+}
+
+/* ---- Planla (Sınav + Program) ---- */
+let efSub = 'mat';
+function renderPlanla(){
+  const subBtns = Object.keys(SUBJECTS).map(s =>
+    '<button onclick="efSub=\'' + s + '\';renderPlanla()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
+    (efSub === s ? 'bg-secondary-container text-on-secondary shadow-[0_4px_0_#572000]' : 'bg-surface-container-highest text-on-surface shadow-[0_4px_0_#171b26]') + '">' +
+    '<span class="material-symbols-outlined text-lg">' + SUBJECTS[s].icon + '</span>' + SUBJECTS[s].name + '</button>'
+  ).join('');
+  const now = new Date();
+  const exams = state.exams.map(e => ({ ...e, dt: new Date(e.date + 'T' + (e.time || '09:30')) })).sort((a,b) => a.dt - b.dt);
+  const examRows = exams.length ? exams.map(e => {
+    const past = e.dt < now;
+    return '<div class="flex items-center gap-2.5 py-2.5 border-b border-surface-container-highest/50 last:border-0">' +
+      '<div class="w-10 h-10 rounded-lg ' + (past ? 'bg-surface-container-highest' : 'bg-secondary-container/20') + ' flex flex-col items-center justify-center shrink-0"><span class="text-[13px] font-extrabold ' + (past ? 'text-on-surface-variant' : 'text-secondary') + ' leading-none">' + new Date(e.date + 'T00:00:00').getDate() + '</span><span class="text-[9px] font-extrabold text-on-surface-variant">' + MONTHS_ABBR[new Date(e.date + 'T00:00:00').getMonth()] + '</span></div>' +
+      '<div class="flex-1 min-w-0"><p class="text-[14px] font-bold ' + (past ? 'text-on-surface-variant line-through' : 'text-primary') + ' truncate">' + esc(e.title) + '</p>' +
+      '<p class="text-[11px] font-semibold text-on-surface-variant truncate">' + (SUBJECTS[e.subject] || {name:''}).name + ' • ' + esc(e.time || '09:30') + ' • alarm ' + (e.alarmDays || 2) + ' gün önce</p></div>' +
+      '<button onclick="deleteExam(\'' + e.id + '\')" class="p-2 rounded-full bg-error-container/15 text-error shrink-0"><span class="material-symbols-outlined text-base">delete</span></button>' +
+    '</div>';
+  }).join('') : '<p class="text-[13px] font-semibold text-on-surface-variant py-2">Planlanmış sınav yok.</p>';
+
+  const dayNames = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+  const schedRows = state.schedule.slice().sort((a,b) => a.day - b.day || a.start.localeCompare(b.start)).map(s =>
+    '<div class="flex items-center gap-2.5 py-2 border-b border-surface-container-highest/50 last:border-0">' +
+      '<span class="px-2 py-1 rounded-md bg-surface-container-high text-[11px] font-extrabold text-tertiary-fixed shrink-0 w-[86px] text-center">' + dayNames[s.day] + '</span>' +
+      '<div class="flex-1 min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + esc(s.title) + '</p>' +
+      '<p class="text-[11px] font-semibold text-on-surface-variant truncate">' + s.start + '-' + s.end + (s.place ? ' • ' + esc(s.place) : '') + '</p></div>' +
+      '<button onclick="deleteSchedule(\'' + s.id + '\')" class="p-2 rounded-full bg-error-container/15 text-error shrink-0"><span class="material-symbols-outlined text-base">delete</span></button>' +
+    '</div>'
+  ).join('');
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
+    '<div class="relative overflow-hidden rounded-xl bg-surface-container-high p-space-md shadow-xl">' +
+      '<div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-secondary-container/15 blur-2xl pointer-events-none"></div>' +
+      '<div class="relative flex flex-col gap-1.5">' +
+        '<span class="inline-flex items-center gap-1.5 self-start px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary text-[12px] font-extrabold shadow-md"><span class="material-symbols-outlined text-base" style="font-variation-settings:\'FILL\' 1;">local_fire_department</span>KOMUTAN PANELİ</span>' +
+        '<h1 class="text-[26px] font-extrabold text-primary">🎯 Boss Savaşı Tanımla</h1>' +
+        '<p class="text-[14px] font-medium text-on-surface-variant">Burada tanımladığın sınavlar, ' + esc(state.student.nickname) + '"nin ekranında <span class="text-secondary font-extrabold">2 gün önceden Boss Alarmı</span> olarak aktifleşir!</p>' +
+      '</div>' +
+    '</div>' +
+    /* Sınav formu */
+    '<section class="card flex flex-col gap-3">' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">swords</span>Yeni Sınav</h3>' +
+      '<div><label class="lbl">Ders</label><div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">' + subBtns + '</div></div>' +
+      '<div><label class="lbl">Sınav / Boss Adı *</label><input id="ef-title" class="inp" placeholder="Örn: Matematik Yazılı Sınavı"></div>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div><label class="lbl">Tarih *</label><input id="ef-date" type="date" class="inp" value="' + ymd(addDays(7)) + '"></div>' +
+        '<div><label class="lbl">Saat</label><input id="ef-time" type="time" class="inp" value="09:30"></div>' +
+      '</div>' +
+      '<div><label class="lbl">Not / Kapsam</label><input id="ef-note" class="inp" placeholder="Konular, getirilecek araçlar..."></div>' +
+      '<div><label class="lbl">Alarm: kaç gün önce?</label><input id="ef-alarm" type="number" min="0" max="14" value="2" class="inp !w-24"></div>' +
+      '<button onclick="submitExam()" class="btn-orange"><span class="material-symbols-outlined">local_fire_department</span>Boss Savaşını Planla</button>' +
+    '</section>' +
+    '<section class="card"><h3 class="text-[15px] font-extrabold text-primary mb-1 flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">event</span>Tüm Sınavlar</h3>' + examRows + '</section>' +
+    /* Program yönetimi */
+    '<section class="card flex flex-col gap-3">' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-primary-container">calendar_month</span>Haftalık Ders Programı</h3>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div><label class="lbl">Gün</label><select id="sf-day" class="inp">' + dayNames.map((n, i) => '<option value="' + i + '">' + n + '</option>').join('') + '</select></div>' +
+        '<div><label class="lbl">Tür</label><select id="sf-type" class="inp"><option value="school">Okul</option><option value="course">Kurs & Etüt</option></select></div>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div><label class="lbl">Başlangıç</label><input id="sf-start" type="time" class="inp" value="16:30"></div>' +
+        '<div><label class="lbl">Bitiş</label><input id="sf-end" type="time" class="inp" value="18:30"></div>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div><label class="lbl">Etkinlik *</label><input id="sf-title" class="inp" placeholder="Matematik Kampı"></div>' +
+        '<div><label class="lbl">Yer</label><input id="sf-place" class="inp" placeholder="Media 3"></div>' +
+      '</div>' +
+      '<button onclick="submitSchedule()" class="btn-ghost"><span class="material-symbols-outlined">add</span>Programa Ekle</button>' +
+      '<button onclick="resetSchedule()" class="w-full py-2 rounded-full bg-tertiary-container/15 text-tertiary-fixed-dim text-[12px] font-extrabold flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-base">restart_alt</span>Okul Programını Orijinal Haline Sıfırla</button>' +
+      '<div class="mt-1">' + schedRows + '</div>' +
+    '</section>' +
+  '</div>';
+}
+function submitExam(){
+  const title = $('#ef-title').value.trim();
+  if (!title) { toast('⚠️ Sınav adı gerekli!'); return; }
+  const date = $('#ef-date').value; if (!date) { toast('⚠️ Tarih gerekli!'); return; }
+  const exam = { id: uid(), title, subject: efSub, date, time: $('#ef-time').value || '09:30', note: $('#ef-note').value.trim(), alarmDays: Math.max(0, Math.min(14, parseInt($('#ef-alarm').value) || 2)) };
+  state.exams.push(exam);
+  state.alarmsLast[exam.id] = ''; // alarm yeniden tetiklenebilsin
+  save(); renderPlanla();
+  toast('🎯 Boss savaşı planlandı! ' + leftLabel(new Date(exam.date + 'T' + exam.time)));
+  beep(false);
+}
+function deleteExam(id){
+  askConfirm('Sınavı sil', 'Bu sınav ' + state.student.nickname + '"nin ekranından da kalkacak.', () => {
+    state.exams = state.exams.filter(e => e.id !== id);
+    save(); renderPlanla(); toast('Sınav silindi');
+  }, 'Sil');
+}
+function submitSchedule(){
+  const title = $('#sf-title').value.trim();
+  if (!title) { toast('⚠️ Etkinlik adı gerekli!'); return; }
+  state.schedule.push({ id: uid(), day: parseInt($('#sf-day').value), type: $('#sf-type').value, start: $('#sf-start').value || '16:30', end: $('#sf-end').value || '18:30', title, place: $('#sf-place').value.trim() });
+  save(); renderPlanla(); toast('📅 Program güncellendi');
+}
+function deleteSchedule(id){
+  state.schedule = state.schedule.filter(s => s.id !== id);
+  save(); renderPlanla(); toast('Program öğesi silindi');
+}
+function resetSchedule(){
+  askConfirm('Okul programını geri yükle', 'Okul ders programı orijinal haline sıfırlanır (kurs/etüt girdilerin silinmez).', () => {
+    const courses = state.schedule.filter(s => s.type !== 'school');
+    state.schedule = realSchedule().concat(courses);
+    save(); renderPlanla(); toast('📅 Okul programı geri yüklendi (30 ders)');
+  }, 'Geri Yükle');
+}
+
+/* ---- Ödül Yönetimi ---- */
+function renderOdulmgr(){
+  const rows = state.rewards.map(r =>
+    '<div class="flex items-center gap-2.5 py-2.5 border-b border-surface-container-highest/50 last:border-0">' +
+      '<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-xl shrink-0">' + (r.icon || '🎁') + '</div>' +
+      '<div class="flex-1 min-w-0"><p class="text-[14px] font-bold text-primary truncate">' + esc(r.title) + '</p>' +
+      '<p class="text-[12px] font-extrabold text-tertiary-fixed">' + nf(r.cost) + ' XP</p></div>' +
+      '<button onclick="toggleReward(\'' + r.id + '\')" class="px-2.5 py-1.5 rounded-full text-[10px] font-extrabold shrink-0 ' + (r.active !== false ? 'bg-primary-container/15 text-primary-container' : 'bg-surface-container-high text-on-surface-variant') + '">' + (r.active !== false ? 'MAĞAZADA' : 'PASİF') + '</button>' +
+      '<button onclick="deleteReward(\'' + r.id + '\')" class="p-2 rounded-full bg-error-container/15 text-error shrink-0"><span class="material-symbols-outlined text-base">delete</span></button>' +
+    '</div>'
+  ).join('');
+  const hist = state.redemptions.slice().reverse();
+  const histHtml = hist.length ? hist.map(r => {
+    const st = r.status === 'pending' ? 'ONAY BEKLİYOR' : r.status === 'approved' ? 'ONAYLANDI ✓' : 'REDDEDİLDİ';
+    const cls = r.status === 'pending' ? 'text-tertiary-fixed-dim' : r.status === 'approved' ? 'text-primary-container' : 'text-error';
+    return '<div class="flex items-center justify-between gap-2 py-2 border-b border-surface-container-highest/50 last:border-0">' +
+      '<div class="min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + (r.icon || '🎁') + ' ' + esc(r.title) + '</p><p class="text-[11px] font-semibold text-on-surface-variant">' + esc(r.date) + ' • -' + nf(r.cost) + ' XP</p></div>' +
+      (r.status === 'pending'
+        ? '<div class="flex gap-1.5 shrink-0"><button onclick="approveRedeem(\'' + r.id + '\')" class="px-2.5 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[10px] font-extrabold">ONAYLA</button>' +
+          '<button onclick="rejectRedeem(\'' + r.id + '\')" class="px-2.5 py-1.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold">RED</button></div>'
+        : '<span class="text-[10px] font-extrabold ' + cls + ' shrink-0">' + st + '</span>') +
+    '</div>';
+  }).join('') : '<p class="text-[13px] font-semibold text-on-surface-variant py-1">Henüz takas talebi yok.</p>';
+
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
+    '<div class="card flex flex-col gap-3">' +
+      '<h2 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-primary-container">redeem</span>Yeni Ödül Ekle</h2>' +
+      '<div class="grid grid-cols-[70px_1fr] gap-2">' +
+        '<div><label class="lbl">Simge</label><input id="rf-icon" class="inp !px-2 text-center text-xl" value="🎁" maxlength="4"></div>' +
+        '<div><label class="lbl">Ödül Adı *</label><input id="rf-title" class="inp" placeholder="Örn: 1 Saat Oyun Konsolu"></div>' +
+      '</div>' +
+      '<div><label class="lbl">XP Fiyatı *</label><input id="rf-cost" type="number" min="10" max="100000" step="50" value="500" class="inp !w-32"></div>' +
+      '<button onclick="submitReward()" class="btn-green"><span class="material-symbols-outlined">add_shopping_cart</span>Mağazaya Ekle</button>' +
+    '</div>' +
+    '<section class="card"><h3 class="text-[15px] font-extrabold text-primary mb-1">Ödül Mağazası</h3>' + (rows || '<p class="text-[13px] font-semibold text-on-surface-variant py-2">Mağaza boş.</p>') + '</section>' +
+    '<section class="card"><h3 class="text-[15px] font-extrabold text-primary mb-1">Takas Talepleri & Geçmiş</h3>' + histHtml + '</section>' +
+  '</div>';
+}
+function submitReward(){
+  const title = $('#rf-title').value.trim();
+  if (!title) { toast('⚠️ Ödül adı gerekli!'); return; }
+  const cost = Math.max(10, parseInt($('#rf-cost').value) || 100);
+  state.rewards.push({ id: uid(), title, cost, icon: $('#rf-icon').value.trim() || '🎁', active: true });
+  save(); renderOdulmgr(); toast('🛍️ Ödül mağazaya eklendi');
+}
+function toggleReward(id){
+  const r = state.rewards.find(x => x.id === id); if (!r) return;
+  r.active = r.active === false; save(); renderOdulmgr();
+}
+function deleteReward(id){
+  askConfirm('Ödülü sil', 'Bu ödül mağazadan kaldırılacak.', () => {
+    state.rewards = state.rewards.filter(r => r.id !== id);
+    save(); renderOdulmgr(); toast('Ödül silindi');
+  }, 'Sil');
+}
+
+/* ---- Ayarlar ---- */
+function renderAyarlar(){
+  const fb = state.settings.firebase;
+  $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
+    '<h2 class="text-[22px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-primary-container">settings</span>Ayarlar</h2>' +
+    /* PIN */
+    '<section class="card flex flex-col gap-3">' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">shield_lock</span>Veli PIN Kodu</h3>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">Veli moduna geçişte istenen 4 haneli PIN.</p>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div><label class="lbl">Yeni PIN</label><input id="st-pin1" type="password" inputmode="numeric" maxlength="4" class="inp text-center tracking-[0.5em]"></div>' +
+        '<div><label class="lbl">PIN Tekrar</label><input id="st-pin2" type="password" inputmode="numeric" maxlength="4" class="inp text-center tracking-[0.5em]"></div>' +
+      '</div>' +
+      '<button onclick="savePin()" class="btn-ghost"><span class="material-symbols-outlined">lock_reset</span>PIN\'i Güncelle</button>' +
+    '</section>' +
+    /* Bildirim */
+    '<section class="card flex flex-col gap-2">' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">notifications_active</span>Boss Alarmları</h3>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">Sınavlardan ayarlanan gün önce sesli uyarı + cihaz bildirimi gönderilir.</p>' +
+      '<div id="st-notify" class="flex items-center justify-between bg-surface-container-lowest rounded-lg p-3">' +
+        '<span class="text-[13px] font-bold text-on-surface">Bildirim izni: ' + (('Notification' in window && Notification.permission === 'granted') ? '<span class="text-primary-container">AÇIK ✓</span>' : '<span class="text-error">KAPALI</span>') + '</span>' +
+        '<button onclick="askNotify();setTimeout(renderAyarlar,800)" class="px-3 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[12px] font-extrabold">İzin İste</button>' +
+      '</div>' +
+    '</section>' +
+    /* Firebase */
+    '<section class="card flex flex-col gap-3">' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-primary-container">cloud_sync</span>Bulut Senkronu (Firebase)</h3>' +
+      '<div class="flex items-center justify-between bg-surface-container-lowest rounded-lg p-3">' +
+        '<span class="text-[13px] font-bold text-on-surface">Durum: ' + (FB.connected ? '<span class="text-primary-container">BAĞLI ✓</span>' : '<span class="text-on-surface-variant">Yerel (Lokal)</span>') + '</span>' +
+        (FB.connected ? '<button onclick="fbDisconnect()" class="px-3 py-1.5 rounded-full bg-error-container text-on-error-container text-[12px] font-extrabold">Kes</button>' : '') +
+      '</div>' +
+      '<details class="bg-surface-container-lowest rounded-lg p-3">' +
+        '<summary class="text-[13px] font-extrabold text-primary-container cursor-pointer">📡 Firebase kurulum adımları (3 dakika)</summary>' +
+        '<ol class="text-[12px] font-semibold text-on-surface-variant list-decimal ml-4 mt-2 space-y-1">' +
+          '<li><b>console.firebase.google.com</b> → yeni proje oluştur (Analytics kapatabilirsin).</li>' +
+          '<li>Sol menüden <b>Build → Realtime Database</b> seç (<b>Firestore değil!</b>) → "Create Database" → Test mode → Enable.</li>' +
+          '<li>Proje ayarlarından (⚙️) bir <b>Web uygulaması</b> ekle (&lt;/&gt; simgesi) → verilen <b>firebaseConfig</b> nesnesini kopyala.</li>' +
+          '<li>Aşağıdaki kutuya yapılandırmayı yapıştır → <b>Bağlan</b>.\'da tıkla.</li>' +
+          '<li>Bağlanınca uzak veri varsa çekilir; yoksa bu cihazdaki veriler buluta yüklenir. Diğer cihazda aynı config ile bağlan → otomatik senkron! 🔄</li>' +
+        '</ol>' +
+        '<p class="text-[11px] font-semibold text-secondary mt-2">⚠️ Test modu kuralları herkese açık verir; verilerde yalnızca görev/ödül bilgisi tutulur, yine de Firebase projesini kimseyle paylaşma.</p>' +
+      '</details>' +
+      '<textarea id="st-fb" class="inp font-mono !text-[11px] min-h-[110px]" placeholder=\'{\n  "apiKey": "AIza...",\n  "authDomain": "proje.firebaseapp.com",\n  "databaseURL": "https://proje-default-rtdb.firebaseio.com",\n  "projectId": "proje",\n  "storageBucket": "proje.appspot.com",\n  "messagingSenderId": "123",\n  "appId": "1:123:web:abc"\n}\'>' + (fb ? esc(JSON.stringify(fb, null, 2)) : '') + '</textarea>' +
+      '<button onclick="fbConnectForm()" class="btn-green"><span class="material-symbols-outlined">cloud_upload</span>Bağlan & Senkronize Et</button>' +
+    '</section>' +
+    /* Yedek */
+    '<section class="card flex flex-col gap-3">' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">save</span>Yedek & Sıfırlama</h3>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<button onclick="exportData()" class="btn-ghost"><span class="material-symbols-outlined">download</span>Dışa Aktar</button>' +
+        '<label class="btn-ghost cursor-pointer"><span class="material-symbols-outlined">upload</span>İçe Aktar<input type="file" id="st-import" accept=".json" class="hidden" onchange="importData(this)"></label>' +
+      '</div>' +
+      '<button onclick="resetData()" class="w-full py-2.5 rounded-full bg-error-container/15 text-error text-[13px] font-extrabold flex items-center justify-center gap-2"><span class="material-symbols-outlined text-base">dangerous</span>Tüm Verileri Sıfırla</button>' +
+    '</section>' +
+    '<p class="text-center text-[11px] font-semibold text-outline-variant">Ödev Avcısı v1.0 • ' + esc(state.student.name) + ' için 💚</p>' +
+  '</div>';
+}
+function savePin(){
+  const a = $('#st-pin1').value, b = $('#st-pin2').value;
+  if (!/^\d{4}$/.test(a)) { toast('PIN 4 haneli olmalı!'); return; }
+  if (a !== b) { toast('PIN\'ler eşleşmiyor!'); return; }
+  state.settings.pin = a; save(); toast('🔐 PIN güncellendi');
+}
+function fbConnectForm(){
+  let cfg;
+  try { cfg = JSON.parse($('#st-fb').value); } catch(e) { toast('⚠️ JSON formatı hatalı!'); return; }
+  if (!cfg.databaseURL || !cfg.projectId) { toast('⚠️ "databaseURL" ve "projectId" zorunlu!'); return; }
+  if (fbConnect(cfg)) {
+    state.settings.firebase = cfg; save();
+    try {
+      FB.ref.once('value').then(snap => {
+        const remote = snap.val();
+        if (remote) {
+          toast('☁️ Buluttaki veriler yüklendi (senkron aktif)');
+        } else {
+          FB.ref.set(state);
+          toast('☁️ Bağlandı! Yerel veriler buluta yüklendi.');
+        }
+        renderAll();
+      });
+    } catch(e) {}
+  }
+}
+function exportData(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'odev-avcisi-yedek-' + todayStr() + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('💾 Yedek indirildi');
+}
+function importData(input){
+  const f = input.files && input.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const s = JSON.parse(reader.result);
+      if (!s.version) throw new Error('Geçersiz dosya');
+      askConfirm('Yedeği yükle', 'Mevcut veriler yedekteki verilerle değiştirilecek. Devam?', () => {
+        state = migrate(s); save(); renderAll(); toast('✅ Yedek yüklendi');
+      }, 'Yükle');
+    } catch(e) { toast('⚠️ Dosya okunamadı!'); }
+  };
+  reader.readAsText(f);
+}
+function resetData(){
+  askConfirm('TÜM VERİLERİ SİL', 'Görevler, XP, sınavlar, ödüller — her şey sıfırlanır ve örnek verilere döner. Bu işlem geri alınamaz!', () => {
+    state = seedState(); save(); renderAll(); toast('Uygulama sıfırlandı');
+  }, 'Sıfırla');
+}
+
+/* ---------- Onay / Red ---------- */
+function approveTask(id){
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'pending') return;
+  t.status = 'completed'; t.completedAt = todayStr();
+  state.xp += t.xp;
+  addHistory(t.xp); bumpStreak(); checkBadges(); save();
+  renderAll();
+  toast('✅ Onaylandı! +' + t.xp + ' XP • ' + nf(state.xp) + ' XP toplam');
+  beep(false);
+}
+function rejectTask(id){
+  askConfirm('Görevi reddet', 'Görev tekrar "aktif" duruma döner, XP verilmez.', () => {
+    const t = state.tasks.find(x => x.id === id); if (t) t.status = 'active';
+    save(); renderAll(); toast('Görev reddedildi — tekrar tamamlanabilir');
+  }, 'Reddet');
+}
+function approveRedeem(id){
+  const r = state.redemptions.find(x => x.id === id); if (!r) return;
+  r.status = 'approved'; checkBadges(); save(); renderAll();
+  toast('🎁 Ödül onaylandı! İyi eğlenceler!');
+  beep(false);
+}
+function rejectRedeem(id){
+  askConfirm('Takası reddet', 'Harcanan ' + nf(state.redemptions.find(x => x.id === id).cost) + ' XP geri iade edilecek.', () => {
+    const r = state.redemptions.find(x => x.id === id); if (!r) return;
+    r.status = 'rejected'; state.xp += r.cost;
+    save(); renderAll(); toast('Takas reddedildi, XP iade edildi');
+  }, 'Reddet');
+}
+
+/* ---------- Öğrenci görev tamamlama ---------- */
+function completeTask(id){
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'active') return;
+  askConfirm('Görev bitti mi?', '"' + t.title + '" onaya gönderilecek. Komutanın onaylamasıyla +' + t.xp + ' XP hesabına geçecek!', () => {
+    t.status = 'pending'; t.completedAt = null;
+    save(); renderAll();
+    toast('📨 Görev onaya gönderildi! Onay gelince XP\'n hesabına geçecek ⚡');
+    beep(true);
+  }, 'Gönder');
+}
+
+/* ---------- Görselleştirme ---------- */
+/* CSS text-transform Türkçe 'i'yi 'I' yapıyor; yaprak metinleri JS ile TR büyük harfe çevir */
+function trUpper(root){
+  if (!root) return;
+  root.querySelectorAll('*').forEach(el => {
+    if (el.children.length === 0 && el.textContent.trim() && getComputedStyle(el).textTransform === 'uppercase') {
+      el.textContent = el.textContent.toLocaleUpperCase('tr-TR');
+      el.style.textTransform = 'none';
+    }
+  });
+}
+function renderAll(){
+  renderHeader(); renderNav();
+  const v = ui.view;
+  if (ui.role === 'parent') {
+    if (v === 'panel') renderPanel();
+    else if (v === 'gorev') renderGorev();
+    else if (v === 'planla') renderPlanla();
+    else if (v === 'odulmgr') renderOdulmgr();
+    else if (v === 'ayarlar') renderAyarlar();
+    else { ui.view = 'panel'; renderPanel(); }
+  } else {
+    if (v === 'home') renderHome();
+    else if (v === 'dersler') renderDersler();
+    else if (v === 'program') renderProgram();
+    else if (v === 'sinavlar') renderSinavlar();
+    else if (v === 'oduller') renderOduller();
+    else { ui.view = 'home'; renderHome(); }
+  }
+  trUpper($('#main'));
+  trUpper(document.querySelector('header'));
+  trUpper(document.getElementById('bottom-nav'));
+}
+
+/* ---------- Timer'lar ---------- */
+setInterval(() => {
+  const now = new Date();
+  // Geri sayımlar
+  state.exams.forEach(e => {
+    const dt = new Date(e.date + 'T' + (e.time || '09:30'));
+    $$('[data-cd="' + e.id + '"]').forEach(el => { el.textContent = cdText(dt - now); });
+    const box = $('[data-cd-box="' + e.id + '"]');
+    if (box) {
+      const ms = Math.max(0, dt - now);
+      const set = (u, val) => { const q = box.querySelector('[data-cd-u="' + u + '"]'); if (q) q.textContent = String(val).padStart(2, '0'); };
+      set('d', Math.floor(ms/864e5)); set('h', Math.floor(ms%864e5/36e5)); set('m', Math.floor(ms%36e5/6e4)); set('s', Math.floor(ms%6e4/1e3));
+    }
+  });
+  const clock = $('#clock-now'); if (clock) clock.lastElementChild.textContent = now.toTimeString().slice(0, 5);
+}, 1000);
+setInterval(checkAlarms, 60000);
+
+/* ---------- PWA Manifest ---------- */
+try {
+  const mf = { name: 'Ödev Avcısı', short_name: 'Ödev Avcısı', display: 'standalone', background_color: '#0f131d', theme_color: '#0f131d', start_url: '.', icons: [{ src: ICON_URI, sizes: '48x48', type: 'image/svg+xml' }] };
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(mf)], { type: 'application/json' }));
+  document.head.appendChild(link);
+} catch(e) {}
+
+/* ---------- Başlat ---------- */
+checkBadges();
+checkAlarms();
+renderAll();
+</script>
+</body>
+</html>
