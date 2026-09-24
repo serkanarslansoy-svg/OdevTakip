@@ -260,35 +260,26 @@ function realTasks(){
     createdAt: '2026-09-24', dueDate, dueTime: '08:00', status: 'active'
   }, opts || {});
   return [
+    /* --- 24 Eylül Perşembe --- */
+    T('İtalyanca: Sogna + Nuovi compagni Sayfaları', 'ita', '“Sogna” kitabından 295, 298, 310 ve 311. sayfaları; Nuovi compagni di viaggio kitabından 294 ve 297. sayfaları yap. Not: “Sogna” kitap adı netleştirilecek.', '2026-09-24', 120),
+    T('İngilizce: Tatil Kitabı + Zamanlar Tekrarı', 'ing', 'Tatil kitabını getir. Simple Present, Present Continuous ve Simple Past konularını olumlu, olumsuz ve soru cümleleriyle tekrar et.', '2026-09-24', 150),
+    T('Matematik: Sayfa 83 Alıştırmaları', 'mat', '83. sayfadaki 126–129. alıştırmaları yap.', '2026-09-24', 100),
     /* --- 25 Eylül Cuma --- */
-    T('Teknoloji: Dik İzdüşüm Çizimi', 'tec', 'İki cismin dik izdüşümünü çiz. Cisimlerin tabanını oluşturmak için bir çokgen çizilmesi gerekiyor.', '2026-09-25', 120),
+    T('Teknoloji: Dik İzdüşüm Çizimi', 'tec', 'İki geometrik cismin dik izdüşümünü çiz; cisimlerin tabanlarını oluşturmak için çokgen çizimi yap.', '2026-09-25', 120),
     T('Coğrafya: Sayfalar + İklim Kuşakları Haritası', 'geo', '32–33. sayfaları çalış; 42–45. sayfalardaki alıştırmaları yap. İklim kuşaklarını gösteren Dünya çizimini hazırla.', '2026-09-25', 150),
-    T('İtalyanca Sınav Tekrarı', 'ita', 'Sınav için tekrar yap ve protokol kâğıdını getir (kitabı değil).', '2026-09-25', 300, { difficulty: 'boss' }),
+    T('İtalyanca: Sınav Tekrarı', 'ita', 'Sınava hazırlanmak için tekrar yap; protokol kâğıdını getir (kitabı değil).', '2026-09-25', 300, { difficulty: 'boss' }),
     T('Tarih Sınav Tekrarı', 'sto', 'Sınav için tekrar yap ve 3. cilt tarih kitabını getir.', '2026-09-25', 300, { difficulty: 'boss' }),
     /* --- 28 Eylül Pazartesi --- */
+    T('İngilizce: Simple Past Fiil Tekrarı', 'ing', 'Tatil kitabını getir. İşlenen fiillerin Simple Past hâllerini olumlu, olumsuz ve soru cümlelerinde tekrar et.', '2026-09-28', 150),
     T('Matematik: Notlar + Geometri 3. Cilt', 'mat', 'Defterdeki notları iyice çalış ve geometri kitabının yeni 3. cildini getir.', '2026-09-28', 150),
     /* --- 29 Eylül Salı --- */
     T('Fransızca: Ensemble c\'est mieux 3. Cilt', 'fra', 'Ensemble c\'est mieux 3. cildi getir.', '2026-09-29', 50),
     /* --- 30 Eylül Çarşamba --- */
-    T('Görsel Sanatlar: Fotoğraf + Aydınger Kâğıdı', 'art', 'Kendi yakın çekim fotoğrafının siyah-beyaz fotokopisini ve aydınger kâğıdını getir.', '2026-09-30', 80),
+    T('Görsel Sanatlar: Fotoğraf + Aydınger Kâğıdı', 'art', 'Yakın çekim bir fotoğrafının siyah-beyaz fotokopisini ve aydınger kâğıdını getir.', '2026-09-30', 80),
+    /* --- 1 Ekim Perşembe --- */
+    T('Matematik: Sayfa 90–91 Alıştırmaları', 'mat', '90. sayfadaki 234–236 ve 91. sayfadaki 246–248. alıştırmaları yap. Her alıştırma için üç deneme yapmanın önemli olduğunu unutma.', '2026-10-01', 150),
     /* --- 6 Ekim Salı --- */
-    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', '3. sınıf için hazırlanmış defteri; güncellenmiş adres/telefon defteri ve şemalarla birlikte getir.', '2026-10-06', 100),
-    /* --- Önceki teslimler (tamamlandı) --- */
-    T('İtalyanca: Sogna + Nuovi compagni Sayfaları', 'ita', '"Sogna" kitabında 295, 298, 310 ve 311. sayfalar; Nuovi compagni di viaggio kitabında 294 ve 297. sayfalar.', '2026-09-24', 100, { status: 'completed', completedAt: '2026-09-24' }),
-    T('İngilizce: Tatil Kitabı + Zamanlar Tekrarı', 'ing', 'Tatil kitabını getir; simple present, present continuous ve simple past zamanlarını olumlu, olumsuz ve soru cümlelerinde tekrar et.', '2026-09-24', 120, { status: 'completed', completedAt: '2026-09-24' }),
-    T('Matematik: Sayfa 83 Alıştırmaları', 'mat', '83. sayfadaki 126–129. alıştırmaları yap.', '2026-09-24', 100, { status: 'completed', completedAt: '2026-09-24' }),
-    T('Görsel Sanatlar: Kare İçinde At', 'art', '286–293. sayfaları çalış; "Kare içinde at" başlıklı 1. çalışmayı teslim et.', '2026-09-23', 100, { status: 'completed', completedAt: '2026-09-23' }),
-    T('İtalyanca: Dikte + Protokol Kâğıtları', 'ita', 'Dikte edilen 5 cümleyi yaz; okunan kitapları ve protokol kâğıtlarını getir.', '2026-09-23', 80, { status: 'completed', completedAt: '2026-09-23' }),
-    T('Fen Bilimleri: Belgesel Raporu', 'sci', 'Belgeselle ilgili raporu tamamla.', '2026-09-22', 120, { status: 'completed', completedAt: '2026-09-22' }),
-    T('Tarih: Sorular + 3. Cilt', 'sto', '3. cilt tarih kitabını getir ve verilen soruları tamamla.', '2026-09-22', 100, { status: 'completed', completedAt: '2026-09-22' }),
-    T('Coğrafya: 22–30 Sayfa Çalışması', 'geo', '22–30. sayfaları, yalnızca derste işlenen kısımları çalış.', '2026-09-21', 100, { status: 'completed', completedAt: '2026-09-21' }),
-    T('İtalyanca: Loecher Kitabı', 'ita', 'Varsa Loecher edebiyat kitabını getir.', '2026-09-21', 40, { status: 'completed', completedAt: '2026-09-21' }),
-    T('İngilizce: Gioconda Yazma Alıştırmaları', 'ing', 'Gioconda English 2 çalışma kitapçığında verilen yazma alıştırmalarını getir.', '2026-09-21', 100, { status: 'completed', completedAt: '2026-09-21' }),
-    T('İtalyanca: Dil Bilgisi Tekrarı + Form', 'ita', 'Sınıf sınavı için dil bilgisini tekrar et; 3. cilt coğrafya kitabını ve birlikte düzeltilecek kitap tanıtım formunu getir.', '2026-09-18', 120, { status: 'completed', completedAt: '2026-09-18' }),
-    T('Tarih: Grup Tekrarı + 2. Cilt', 'sto', 'Grup tekrar çalışması için 2. cilt tarih kitabını getir.', '2026-09-18', 80, { status: 'completed', completedAt: '2026-09-18' }),
-    T('İngilizce: I Discover 2 + Tatil Kitabı', 'ing', 'I Discover 2 kitabını ve tatil kitabını getir.', '2026-09-17', 60, { status: 'completed', completedAt: '2026-09-17' }),
-    T('İtalyanca: Dil Bilgisi Kitabı + Özetler', 'ita', 'Dil bilgisi kitabını ve ödevleri; okunan kitapları ve özetleri getir.', '2026-09-16', 80, { status: 'completed', completedAt: '2026-09-16' }),
-    T('İtalyanca: Tarih 2. Cilt + Ödevler', 'ita', '2. cilt tarih kitabını ve dil bilgisi ödevlerini getir.', '2026-09-15', 60, { status: 'completed', completedAt: '2026-09-15' })
+    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', '3. sınıfa hazır defteri; güncellenmiş adres/telefon bilgileri ve şemalarla birlikte getir.', '2026-10-06', 100)
   ];
 }
 /* Gerçek sınavlar: 25 Eylül Cuma verificaciones */
@@ -304,7 +295,7 @@ function seedState(){
   const t = todayStr();
   const day = n => ymd(addDays(n));
   return {
-    version: 1,
+    version: 2,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
     xp: 0,
     streak: 0,
@@ -341,6 +332,10 @@ function loadState(){
   const s = seedState(); localStorage.setItem(LS_KEY, JSON.stringify(s)); return s;
 }
 function migrate(s){
+  if ((s.version || 1) < 2) {
+    s.tasks = realTasks();
+    s.version = 2;
+  }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
   s.badges = s.badges || {}; s.alarmsLast = s.alarmsLast || {};
