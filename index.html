@@ -306,13 +306,10 @@ function seedState(){
   return {
     version: 1,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
-    xp: 1360,
-    streak: 5,
-    lastCompletionDate: day(-1),
-    history: [
-      { d: day(-5), xp: 120, n: 1 }, { d: day(-4), xp: 150, n: 1 },
-      { d: day(-3), xp: 120, n: 1 }, { d: day(-2), xp: 200, n: 1 }, { d: day(-1), xp: 150, n: 1 }
-    ],
+    xp: 0,
+    streak: 0,
+    lastCompletionDate: null,
+    history: [],
     tasks: realTasks(),
     exams: realExams(),
     schedule: realSchedule(),
@@ -1422,6 +1419,7 @@ function renderAyarlar(){
         '<button onclick="exportData()" class="btn-ghost"><span class="material-symbols-outlined">download</span>Dışa Aktar</button>' +
         '<label class="btn-ghost cursor-pointer"><span class="material-symbols-outlined">upload</span>İçe Aktar<input type="file" id="st-import" accept=".json" class="hidden" onchange="importData(this)"></label>' +
       '</div>' +
+      '<button onclick="resetProgress()" class="w-full py-2.5 rounded-full bg-secondary-container/15 text-secondary text-[13px] font-extrabold flex items-center justify-center gap-2"><span class="material-symbols-outlined text-base">restart_alt</span>Ruz İlerlemesini Sıfırla</button>' +
       '<button onclick="resetData()" class="w-full py-2.5 rounded-full bg-error-container/15 text-error text-[13px] font-extrabold flex items-center justify-center gap-2"><span class="material-symbols-outlined text-base">dangerous</span>Tüm Verileri Sıfırla</button>' +
     '</section>' +
     '<p class="text-center text-[11px] font-semibold text-outline-variant">Ödev Avcısı v1.0 • ' + esc(state.student.name) + ' için 💚</p>' +
@@ -1478,6 +1476,17 @@ function importData(input){
 function resetData(){
   askConfirm('TÜM VERİLERİ SİL', 'Görevler, XP, sınavlar, ödüller — her şey sıfırlanır ve örnek verilere döner. Bu işlem geri alınamaz!', () => {
     state = seedState(); save(); renderAll(); toast('Uygulama sıfırlandı');
+  }, 'Sıfırla');
+}
+function resetProgress(){
+  askConfirm('RUZ İLERLEMESİNİ SIFIRLA', 'XP, seviye, seri, rozetler ve takas geçmişi sıfırlanacak. Görevler, sınavlar, program ve ödüller korunacak. Devam edilsin mi?', () => {
+    state.xp = 0;
+    state.streak = 0;
+    state.lastCompletionDate = null;
+    state.history = [];
+    state.badges = {};
+    state.redemptions = [];
+    save(); renderAll(); toast('Ruz ilerlemesi sıfırlandı: LVL 1 • 0 XP');
   }, 'Sıfırla');
 }
 
