@@ -432,10 +432,34 @@ function checkBadges(){
     }
   });
 }
+function pruneBadges(){
+  BADGES.forEach(b => { if (state.badges[b.id] && !b.cond()) delete state.badges[b.id]; });
+}
 function addHistory(xp){
   const t = todayStr();
   let h = state.history.find(x => x.d === t);
   if (h) { h.xp += xp; h.n += 1; } else { state.history.push({ d: t, xp, n: 1 }); }
+}
+function removeHistory(xp, date){
+  const d = String(date || todayStr()).slice(0, 10);
+  const h = state.history.find(x => x.d === d);
+  if (!h) return;
+  h.xp = Math.max(0, h.xp - xp);
+  h.n = Math.max(0, h.n - 1);
+  if (h.n === 0) state.history = state.history.filter(x => x !== h);
+}
+function recalcStreak(){
+  const days = [...new Set(state.history.filter(h => h.n > 0).map(h => h.d))].sort();
+  if (!days.length) { state.streak = 0; state.lastCompletionDate = null; return; }
+  let streak = 1;
+  for (let i = days.length - 1; i > 0; i--) {
+    const cur = new Date(days[i] + 'T00:00:00');
+    const prev = new Date(days[i - 1] + 'T00:00:00');
+    if ((cur - prev) / 864e5 !== 1) break;
+    streak++;
+  }
+  state.streak = streak;
+  state.lastCompletionDate = days[days.length - 1];
 }
 function bumpStreak(){
   const t = todayStr(), y = ymd(addDays(-1));
@@ -1047,6 +1071,7 @@ function pendingRedemptions(){ return state.redemptions.filter(r => r.status ===
 function renderPanel(){
   const pt = pendingTasks(), pr = pendingRedemptions();
   const activeCount = state.tasks.filter(t => t.status === 'active').length;
+  const completed = state.tasks.filter(t => t.status === 'completed').sort((a,b) => String(b.completedAt || '').localeCompare(String(a.completedAt || '')));
   const ws = weekStats();
   const approvalCard = (kind, item) => {
     const isTask = kind === 'task';
@@ -1100,6 +1125,13 @@ function renderPanel(){
         ? '<div class="flex flex-col gap-2.5">' + pt.map(t => approvalCard('task', t)).join('') + pr.map(r => approvalCard('reward', r)).join('') + '</div>'
         : '<p class="text-[13px] font-semibold text-on-surface-variant">Bekleyen onay yok. ' + esc(state.student.nickname) + ' görev tamamladığında burada görünecek.</p>') +
     '</div>' +
+    /* Tamamlanan görevler */
+    '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md">' +
+      '<div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-container text-2xl">task_alt</span><span class="text-[18px] font-bold text-on-surface">Tamamlanan Görevler</span></div><span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[12px] font-extrabold">' + completed.length + '</span></div>' +
+      (completed.length ? '<div class="flex flex-col gap-2.5">' + completed.map(t =>
+        '<div class="card">' + taskCard(t) + '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
+      ).join('') + '</div>' : '<p class="text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</p>') +
+    '</div>' +
     /* Hızlı erişim */
     '<div class="grid grid-cols-3 gap-2">' +
       '<button onclick="showView(\'gorev\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-3xl">add_task</span><span class="text-[12px] font-extrabold text-on-surface">Görev Ata</span></button>' +
@@ -1133,6 +1165,7 @@ function weekBars(){
 let tfSub = 'mat', tfDiff = 'normal';
 function renderGorev(){
   const active = state.tasks.filter(t => t.status === 'active' || t.status === 'pending').sort((a,b) => taskDue(a) - taskDue(b));
+  const completed = state.tasks.filter(t => t.status === 'completed').sort((a,b) => String(b.completedAt || '').localeCompare(String(a.completedAt || '')));
   const t0 = todayStr();
   const subBtns = Object.keys(SUBJECTS).map(s =>
     '<button onclick="tfSub=\'' + s + '\';renderGorev()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
@@ -1164,6 +1197,13 @@ function renderGorev(){
         '<div class="card">' + taskCard(t) +
         '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') +
+    '</div>' +
+    '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5 mt-2"><span class="material-symbols-outlined text-primary-container text-xl">task_alt</span>Tamamlanan Görevler (' + completed.length + ')</h3>' +
+    '<div class="flex flex-col gap-2.5">' +
+      (completed.length ? completed.map(t =>
+        '<div class="card">' + taskCard(t) +
+        '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
+      ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') +
     '</div>' +
   '</div>';
 }
@@ -1500,6 +1540,21 @@ function rejectTask(id){
     const t = state.tasks.find(x => x.id === id); if (t) t.status = 'active';
     save(); renderAll(); toast('Görev reddedildi — tekrar tamamlanabilir');
   }, 'Reddet');
+}
+function undoCompletedTask(id){
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'completed') return;
+  askConfirm('Tamamlamayı geri al', '"' + t.title + '" yeniden aktif olacak. Verilen ' + nf(t.xp) + ' XP geri alınacak; seri ve rozetler yeniden hesaplanacak.', () => {
+    const oldBadgeCount = Object.keys(state.badges).length;
+    state.xp = Math.max(0, state.xp - t.xp);
+    removeHistory(t.xp, t.completedAt);
+    t.status = 'active';
+    t.completedAt = null;
+    recalcStreak();
+    pruneBadges();
+    const removedBadges = oldBadgeCount - Object.keys(state.badges).length;
+    save(); renderAll();
+    toast('↩️ Görev geri alındı • -' + nf(t.xp) + ' XP' + (removedBadges > 0 ? ' • ' + removedBadges + ' rozet kilitlendi' : ''));
+  }, 'Geri Al');
 }
 function approveRedeem(id){
   const r = state.redemptions.find(x => x.id === id); if (!r) return;
