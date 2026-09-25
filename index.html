@@ -1568,13 +1568,14 @@ function resetData(){
   }, 'Sıfırla');
 }
 function resetProgress(){
-  askConfirm('RUZ İLERLEMESİNİ SIFIRLA', 'XP, seviye, seri, rozetler ve takas geçmişi sıfırlanacak. Görevler, sınavlar, program ve ödüller korunacak. Devam edilsin mi?', () => {
+  askConfirm('RUZ İLERLEMESİNİ SIFIRLA', 'XP, seviye, seri, rozetler, tamamlanma durumları ve takas geçmişi sıfırlanacak. Görev listesi, sınavlar, program ve ödüller korunacak. Devam edilsin mi?', () => {
     state.xp = 0;
     state.streak = 0;
     state.lastCompletionDate = null;
     state.history = [];
     state.badges = {};
     state.redemptions = [];
+    state.tasks.forEach(t => { t.status = 'active'; t.completedAt = null; });
     state.exams.forEach(e => { delete e.score; delete e.awardedXp; delete e.awardedAt; });
     save(); renderAll(); toast('Ruz ilerlemesi sıfırlandı: LVL 1 • 0 XP');
   }, 'Sıfırla');
