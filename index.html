@@ -297,7 +297,7 @@ function seedState(){
   const t = todayStr();
   const day = n => ymd(addDays(n));
   return {
-    version: 5,
+    version: 6,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
     xp: 0,
     totalXp: 0,
@@ -380,6 +380,28 @@ function migrate(s){
       else s.tasks.push(nt);
     });
     s.version = 5;
+  }
+  if ((s.version || 1) < 6) {
+    /* Önceden girilmiş sınav notlarını yeni ödül tablosuna uyarla. */
+    let xpDelta = 0, goldDelta = 0;
+    (s.exams || []).forEach(e => {
+      if (e.score == null) return;
+      const oldXp = Number(e.awardedXp) || 0;
+      const newXp = examBonus(e, Number(e.score));
+      const delta = newXp - oldXp;
+      e.awardedXp = newXp;
+      xpDelta += delta;
+      goldDelta += Math.max(1, Math.round(newXp / 10)) - Math.max(1, Math.round(oldXp / 10));
+      const d = e.awardedAt || e.date;
+      if (d && delta !== 0) {
+        const h = (s.history || []).find(x => x.d === d);
+        if (h) h.xp += delta;
+      }
+    });
+    s.xp = Math.max(0, (Number(s.xp) || 0) + xpDelta);
+    s.totalXp = Math.max(0, (Number(s.totalXp) || 0) + xpDelta);
+    s.gold = Math.max(0, (Number(s.gold) || 0) + goldDelta);
+    s.version = 6;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
