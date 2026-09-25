@@ -382,6 +382,18 @@ function save(){
 
 /* ---------- Firebase Senkron ---------- */
 const FB = { connected:false, ref:null, applyingRemote:false };
+/* Aile cihazları için ortak Firebase projesi. Web API anahtarı gizli parola değildir;
+   veritabanı erişimi Firebase kurallarıyla korunur. */
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDgmhNj0Rc3E5ZNx5Yg3uUh_rTHQIEGkBQ',
+  authDomain: 'odev-avcisi-35857.firebaseapp.com',
+  databaseURL: 'https://odev-avcisi-35857-default-rtdb.us-central1.firebasedatabase.app',
+  projectId: 'odev-avcisi-35857',
+  storageBucket: 'odev-avcisi-35857.firebasestorage.app',
+  messagingSenderId: '131788849014',
+  appId: '1:131788849014:web:f18064085ead2bd2960457',
+  measurementId: 'G-1FX7Z5TS5L'
+};
 function setSyncUI(){
   const dot = $('#sync-dot'), txt = $('#sync-dot-text');
   if (FB.connected) {
@@ -1702,6 +1714,14 @@ try {
 checkBadges();
 checkAlarms();
 renderAll();
+/* Yeni kurulumlarda ortak bulut senkronunu otomatik başlat. */
+setTimeout(() => {
+  if (!state.settings.firebase) {
+    state.settings.firebase = DEFAULT_FIREBASE_CONFIG;
+    save();
+  }
+  if (state.settings.firebase && !FB.connected) fbConnect(state.settings.firebase);
+}, 250);
 </script>
 </body>
 </html>
