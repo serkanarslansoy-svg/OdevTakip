@@ -203,6 +203,15 @@ function cdText(ms){
   const d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4), s = Math.floor(ms%6e4/1e3);
   return (d ? d+'g ' : '') + h + 's ' + m + 'dk ' + s + 'sn';
 }
+/* Ödev ödülü: XP ve altın birbirinden bağımsızdır. */
+function taskGold(t){
+  if (t && typeof t.gold === 'number') return Math.max(0, t.gold);
+  const xp = Math.max(0, Number(t && t.xp) || 0);
+  if (xp <= 50) return 0;                 // mini görev
+  if ((t && t.difficulty === 'boss') || xp >= 200) return 20; // zor/boss görev
+  if (xp >= 150) return 10;               // orta görev
+  return 5;                               // standart görev
+}
 
 const SUBJECTS = {
   mat:{ name:'Matematik',       it:'Matematica',          icon:'calculate' },
@@ -255,10 +264,14 @@ const ICON_URI = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://
 
 /* Gerçek ödev listesi (compiti) — veli tarafından güncellenir */
 function realTasks(){
-  const T = (title, subject, desc, dueDate, xp, opts) => Object.assign({
+  const T = (title, subject, desc, dueDate, xp, opts) => {
+    const task = Object.assign({
     id: uid(), title, desc, subject, difficulty: 'normal', xp,
     createdAt: '2026-09-24', dueDate, dueTime: '08:00', status: 'active'
-  }, opts || {});
+    }, opts || {});
+    task.gold = taskGold(task);
+    return task;
+  };
   return [
     /* --- 24 Eylül Perşembe --- */
     T('İtalyanca: Sogna + Nuovi compagni Sayfaları', 'ita', '“Sogna” kitabından 295, 298, 310 ve 311. sayfaları; Nuovi compagni di viaggio kitabından 294 ve 297. sayfaları yap. Not: “Sogna” kitap adı netleştirilecek.', '2026-09-24', 120),
@@ -297,7 +310,7 @@ function seedState(){
   const t = todayStr();
   const day = n => ymd(addDays(n));
   return {
-    version: 6,
+    version: 7,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
     xp: 0,
     totalXp: 0,
@@ -402,6 +415,11 @@ function migrate(s){
     s.totalXp = Math.max(0, (Number(s.totalXp) || 0) + xpDelta);
     s.gold = Math.max(0, (Number(s.gold) || 0) + goldDelta);
     s.version = 6;
+  }
+  if ((s.version || 1) < 7) {
+    /* Eski görevlerde altın XP'den bağımsız standarda taşınır. */
+    (s.tasks || []).forEach(t => { if (typeof t.gold !== 'number') t.gold = taskGold(t); });
+    s.version = 7;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
@@ -705,8 +723,8 @@ function subjectChip(s){
   const sub = SUBJECTS[s] || { name: s, icon: 'school' };
   return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary-container text-[12px] font-extrabold uppercase tracking-tight">' + sub.name + '</span>';
 }
-function xpBadge(xp){
-  return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-tertiary-fixed text-[12px] font-extrabold">+' + xp + ' XP · +' + goldForXp(xp) + ' 🪙</span>';
+function xpBadge(xp, gold){
+  return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-tertiary-fixed text-[12px] font-extrabold">+' + xp + ' XP · +' + (gold ?? taskGold({ xp })) + ' 🪙</span>';
 }
 function statusChip(t){
   if (t.status === 'pending') return '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">hourglass_top</span>Onay Bekliyor</span>';
@@ -727,7 +745,7 @@ function taskCard(t, compact){
           '<span class="material-symbols-outlined text-2xl">' + sub.icon + '</span>' +
         '</div>' +
         '<div class="flex flex-col min-w-0">' +
-          '<div class="flex items-center gap-1.5 flex-wrap">' + subjectChip(t.subject) + xpBadge(t.xp) +
+          '<div class="flex items-center gap-1.5 flex-wrap">' + subjectChip(t.subject) + xpBadge(t.xp, taskGold(t)) +
             (boss ? '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold flex items-center gap-0.5"><span class="material-symbols-outlined text-xs">skull</span>BOSS</span>' : '') +
           '</div>' +
           '<h4 class="text-[16px] font-bold text-primary mt-1 leading-tight">' + esc(t.title) + '</h4>' +
@@ -764,7 +782,7 @@ function openTaskDetail(id){
       '</div>' +
       '<p class="text-[14px] font-semibold text-on-surface leading-relaxed bg-surface-container-lowest rounded-lg p-3">' + esc(t.desc || 'Açıklama yok') + '</p>' +
       '<div class="grid grid-cols-2 gap-2">' +
-        '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Ödül</span><p class="text-[15px] font-extrabold text-primary-container">+' + t.xp + ' XP · +' + goldForXp(t.xp) + ' 🪙</p></div>' +
+        '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Ödül</span><p class="text-[15px] font-extrabold text-primary-container">+' + t.xp + ' XP · +' + taskGold(t) + ' 🪙</p></div>' +
         '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Son Tarih</span><p class="text-[13px] font-extrabold text-on-surface">' + esc(fmtDue(t)) + '</p></div>' +
       '</div>' +
       '<div class="flex justify-center">' + statusChip(t) + '</div>' +
@@ -1181,7 +1199,7 @@ function renderPanel(){
   const approvalCard = (kind, item) => {
     const isTask = kind === 'task';
     const title = isTask ? item.title : item.title;
-    const meta = isTask ? (SUBJECTS[item.subject] || {}).name + ' • +' + item.xp + ' XP / +' + goldForXp(item.xp) + ' 🪙 • ' + esc(fmtDue(item)) : item.icon + ' • -' + nf(item.cost) + ' 🪙';
+    const meta = isTask ? (SUBJECTS[item.subject] || {}).name + ' • +' + item.xp + ' XP / +' + taskGold(item) + ' 🪙 • ' + esc(fmtDue(item)) : item.icon + ' • -' + nf(item.cost) + ' 🪙';
     return '<div class="card flex flex-col gap-2">' +
       '<div class="flex items-start justify-between gap-2">' +
         '<div class="min-w-0"><p class="text-[15px] font-extrabold text-primary truncate">' + esc(title) + '</p>' +
@@ -1290,6 +1308,7 @@ function renderGorev(){
         '</div>' +
         '<div class="flex items-center gap-2 mt-2"><span class="text-[12px] font-extrabold text-on-surface-variant">XP:</span>' +
           '<input id="tf-xp" type="number" min="10" max="5000" step="10" value="' + (tfDiff === 'boss' ? 350 : 100) + '" class="inp !w-28">' +
+          '<span class="text-[12px] font-extrabold text-on-surface-variant">🪙</span><input id="tf-gold" type="number" min="0" max="500" step="1" value="' + (tfDiff === 'boss' ? 20 : 5) + '" class="inp !w-20">' +
           '<input id="tf-date" type="date" value="' + t0 + '" class="inp flex-1">' +
           '<input id="tf-time" type="time" value="21:00" class="inp !w-24">' +
         '</div>' +
@@ -1300,6 +1319,7 @@ function renderGorev(){
     '<div class="flex flex-col gap-2.5">' +
       (active.length ? active.map(t =>
         '<div class="card">' + taskCard(t) +
+        '<button onclick="editTaskReward(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">tune</span>XP / Altın Düzenle</button>' +
         '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') +
     '</div>' +
@@ -1328,12 +1348,25 @@ function submitTask(){
   if (!title) { toast('⚠️ Görev adı gerekli!'); $('#tf-title').classList.add('shake'); setTimeout(() => $('#tf-title').classList.remove('shake'), 500); return; }
   const desc = $('#tf-desc').value.trim();
   const xp = Math.max(10, Math.min(5000, parseInt($('#tf-xp').value) || 100));
+  const gold = Math.max(0, Math.min(500, parseInt($('#tf-gold').value) || 0));
   const date = $('#tf-date').value || todayStr();
   const time = $('#tf-time').value || '21:00';
-  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, createdAt: todayStr(), dueDate: date, dueTime: time, status: 'active' });
+  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, gold, createdAt: todayStr(), dueDate: date, dueTime: time, status: 'active' });
   save(); renderGorev();
   toast('⚔️ Görev yayınlandı! ' + (state.student.nickname || '') + ' ekranında görünecek.');
   beep(true);
+}
+function editTaskReward(id){
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status === 'completed') { toast('Tamamlanmış görevlerin kazanımı değiştirilemez.'); return; }
+  const xpRaw = prompt('Bu görev kaç XP versin?', String(t.xp));
+  if (xpRaw === null) return;
+  const goldRaw = prompt('Bu görev kaç altın versin?', String(taskGold(t)));
+  if (goldRaw === null) return;
+  const xp = Math.max(10, Math.min(5000, Number(xpRaw) || 0));
+  const gold = Math.max(0, Math.min(500, Number(goldRaw) || 0));
+  if (!xp) { toast('XP 0 olamaz.'); return; }
+  t.xp = Math.round(xp); t.gold = Math.round(gold);
+  save(); renderGorev(); toast('✅ Görev ödülü güncellendi: +' + t.xp + ' XP / +' + t.gold + ' 🪙');
 }
 function deleteTask(id){
   askConfirm('Görevi sil', 'Bu görev kalıcı olarak silinecek. Emin misin?', () => {
@@ -1680,10 +1713,10 @@ function approveTask(id){
   t.status = 'completed'; t.completedAt = todayStr();
   state.xp += t.xp;
   state.totalXp += t.xp;
-  state.gold += goldForXp(t.xp);
+  state.gold += taskGold(t);
   addHistory(t.xp); bumpStreak(); checkBadges(); save();
   renderAll();
-  toast('✅ Onaylandı! +' + t.xp + ' XP • +' + goldForXp(t.xp) + ' 🪙 altın');
+  toast('✅ Onaylandı! +' + t.xp + ' XP • +' + taskGold(t) + ' 🪙 altın');
   beep(false);
 }
 function rejectTask(id){
@@ -1698,7 +1731,7 @@ function undoCompletedTask(id){
     const oldBadgeCount = Object.keys(state.badges).length;
     state.xp = Math.max(0, state.xp - t.xp);
     state.totalXp = Math.max(0, state.totalXp - t.xp);
-    state.gold = Math.max(0, state.gold - goldForXp(t.xp));
+    state.gold = Math.max(0, state.gold - taskGold(t));
     removeHistory(t.xp, t.completedAt);
     t.status = 'active';
     t.completedAt = null;
@@ -1706,7 +1739,7 @@ function undoCompletedTask(id){
     pruneBadges();
     const removedBadges = oldBadgeCount - Object.keys(state.badges).length;
     save(); renderAll();
-    toast('↩️ Görev geri alındı • -' + nf(t.xp) + ' XP / -' + goldForXp(t.xp) + ' 🪙' + (removedBadges > 0 ? ' • ' + removedBadges + ' rozet kilitlendi' : ''));
+    toast('↩️ Görev geri alındı • -' + nf(t.xp) + ' XP / -' + taskGold(t) + ' 🪙' + (removedBadges > 0 ? ' • ' + removedBadges + ' rozet kilitlendi' : ''));
   }, 'Geri Al');
 }
 function approveRedeem(id){
@@ -1726,7 +1759,7 @@ function rejectRedeem(id){
 /* ---------- Öğrenci görev tamamlama ---------- */
 function completeTask(id){
   const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'active') return;
-  askConfirm('Görev bitti mi?', '"' + t.title + '" onaya gönderilecek. Komutanın onaylamasıyla +' + t.xp + ' XP ve +' + goldForXp(t.xp) + ' 🪙 hesabına geçecek!', () => {
+  askConfirm('Görev bitti mi?', '"' + t.title + '" onaya gönderilecek. Komutanın onaylamasıyla +' + t.xp + ' XP ve +' + taskGold(t) + ' 🪙 hesabına geçecek!', () => {
     t.status = 'pending'; t.completedAt = null;
     save(); renderAll();
     toast('📨 Görev onaya gönderildi! Onay gelince XP ve altın hesabına geçecek ⚡');
