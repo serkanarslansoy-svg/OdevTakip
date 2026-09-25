@@ -1495,7 +1495,7 @@ function renderOdulmgr(){
 function submitReward(){
   const title = $('#rf-title').value.trim();
   if (!title) { toast('⚠️ Ödül adı gerekli!'); return; }
-  const cost = Math.max(10, parseInt($('#rf-cost').value) || 100);
+  const cost = Math.max(1, parseInt($('#rf-cost').value) || 50);
   state.rewards.push({ id: uid(), title, cost, icon: $('#rf-icon').value.trim() || '🎁', active: true });
   save(); renderOdulmgr(); toast('🛍️ Ödül mağazaya eklendi');
 }
