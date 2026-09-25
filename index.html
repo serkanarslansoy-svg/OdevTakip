@@ -1423,8 +1423,9 @@ function deleteExam(id){
 }
 function examBonus(e, score){
   if (score == null || score < 7) return 0;
-  if (e.boss === false) return score >= 10 ? 300 : score >= 9 ? 225 : score >= 8 ? 150 : 0;
-  return score >= 10 ? 600 : score >= 9 ? 450 : score >= 8 ? 300 : 100;
+  /* Sınava girmek tek başına ödül vermez; puan başarıya göre kazanılır. */
+  if (e.boss === false) return score >= 10 ? 250 : score >= 9 ? 150 : score >= 8 ? 100 : 50;
+  return score >= 10 ? 500 : score >= 9 ? 300 : score >= 8 ? 200 : 100;
 }
 function recordExamScore(id){
   const e = state.exams.find(x => x.id === id); if (!e) return;
