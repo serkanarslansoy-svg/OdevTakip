@@ -31,13 +31,13 @@ Sağ üstteki **Ruz / Veli** düğmeleriyle geçiş yapılır.
 - **Görevler:** Ana ekran — XP/seviye göstergesi, gün serisi 🔥, acil sınav alarmı, bugünün görevleri
 - **Dersler:** Tüm görevler; ders filtreleri, arama, devam eden / tamamlanan sekmeleri
 - **Program:** Haftalık okul + kurs çizelgesi, "ŞU AN" canlı göstergesi
-- **Sınavlar:** Boss savaşı geri sayımları, yaklaşan / geçmiş sınavlar, bildirim izni
+- **Sınavlar:** Boss savaşı geri sayımları, yaklaşan / geçmiş sınavlar, girilmiş sınav notları, bildirim izni
 - **Ödüller:** Karakter vitrini, rozet koleksiyonu, **Ganimet Mağazası** (XP'yi ödüle takas)
 
 ### 🛡️ Veli ekranları (PIN ile)
 - **Panel:** Onay bekleyen görevler/takaslar, hızlı görev şablonları, son 7 gün grafiği
 - **Görev Ata:** Görev oluştur (ders, zorluk BOSS/NORMAL, XP, son tarih) → anında Ruz'un ekranına düşer
-- **Planla:** Sınav tanımla (alarm günü ayarlanır) + haftalık ders programını yönet
+- **Planla:** Sınav tanımla (Boss seçimi ve alarm günü ayarlanır), geçmiş sınavın notunu gir/düzenle + haftalık ders programını yönet
 - **Ödül:** Mağazaya ödül ekle, takas taleplerini onayla/reddet
 - **Ayarlar:** PIN değiştir, bildirim izni, **Firebase senkron**, yedek al/geri yükle, sıfırla
 
@@ -105,7 +105,8 @@ Bağlanınca:
 | **XP** | Görev zorluğuna göre veli belirler (NORMAL 50–250, BOSS 300+) |
 | **Seviye** | Her 500 XP'de 1 seviye + yeni rütbe adı (Çırak Avcı → Boss Termonatör) |
 | **Seri 🔥** | Her onaylanan görev günü seriyi uzatır; gün atlanırsa sıfırlanır |
-| **Rozetler** | İlk görev, 10 görev, 3 BOSS, 3/7 gün seri, 1000 XP, ilk ödül… (8 rozet) |
+| **Sınav notu** | Veli geçmiş sınava 0–10 not girer. Boss sınavında 7+: 100, 8+: 300, 9+: 450, 10: 600 XP; normal sınavda 8+: 150, 9+: 225, 10: 300 XP. Not düzeltilirse XP farkı güncellenir. |
+| **Rozetler** | 8+, 9+, 10 sınav notları; Boss sınavından 8+ ve üç Boss sınavından 8+; görev/XP/ödül rozetleri. Çalışma serisi ve sadece sınava girme rozet kazandırmaz. |
 | **Ödüller** | Veli tanımlar; Ruz XP'sini gerçek ödüllere takas eder, sen onaylarsın |
 
 ---
