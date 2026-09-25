@@ -1331,6 +1331,7 @@ function renderGorev(){
     '<div class="flex flex-col gap-2.5">' +
       (completed.length ? completed.map(t =>
         '<div class="card">' + taskCard(t) +
+        '<button onclick="editTaskReward(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">tune</span>XP / Altın Düzenle</button>' +
         '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') +
     '</div>' +
@@ -1361,15 +1362,30 @@ function submitTask(){
   beep(true);
 }
 function editTaskReward(id){
-  const t = state.tasks.find(x => x.id === id); if (!t || t.status === 'completed') { toast('Tamamlanmış görevlerin kazanımı değiştirilemez.'); return; }
+  const t = state.tasks.find(x => x.id === id); if (!t) return;
+  const wasCompleted = t.status === 'completed';
+  const oldXp = Number(t.xp) || 0;
+  const oldGold = taskGold(t);
   const xpRaw = prompt('Bu görev kaç XP versin?', String(t.xp));
   if (xpRaw === null) return;
-  const goldRaw = prompt('Bu görev kaç altın versin?', String(taskGold(t)));
+  const goldRaw = prompt('Bu görev kaç altın versin?', String(oldGold));
   if (goldRaw === null) return;
   const xp = Math.max(10, Math.min(5000, Number(xpRaw) || 0));
   const gold = Math.max(0, Math.min(500, Number(goldRaw) || 0));
   if (!xp) { toast('XP 0 olamaz.'); return; }
   t.xp = Math.round(xp); t.gold = Math.round(gold);
+  if (wasCompleted) {
+    const xpDelta = t.xp - oldXp;
+    const goldDelta = t.gold - oldGold;
+    state.xp = Math.max(0, state.xp + xpDelta);
+    state.totalXp = Math.max(0, state.totalXp + xpDelta);
+    state.gold = Math.max(0, state.gold + goldDelta);
+    if (t.completedAt && xpDelta) {
+      const h = state.history.find(x => x.d === t.completedAt);
+      if (h) h.xp = Math.max(0, h.xp + xpDelta);
+    }
+    pruneBadges(); checkBadges();
+  }
   save(); renderGorev(); toast('✅ Görev ödülü güncellendi: +' + t.xp + ' XP / +' + t.gold + ' 🪙');
 }
 function deleteTask(id){
