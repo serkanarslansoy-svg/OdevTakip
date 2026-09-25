@@ -272,14 +272,16 @@ function realTasks(){
     /* --- 28 Eylül Pazartesi --- */
     T('İngilizce: Simple Past Fiil Tekrarı', 'ing', 'Tatil kitabını getir. İşlenen fiillerin Simple Past hâllerini olumlu, olumsuz ve soru cümlelerinde tekrar et.', '2026-09-28', 150),
     T('Matematik: Notlar + Geometri 3. Cilt', 'mat', 'Defterdeki notları iyice çalış ve geometri kitabının yeni 3. cildini getir.', '2026-09-28', 150),
+    T('Coğrafya: Etkinlikler + Dünya Haritası', 'geo', '70. sayfa 3. etkinlik ve 71. sayfa 3. etkinliği yap. Sınıfta boyamak için siyah-beyaz bir dünya haritası/planisfer yazdır.', '2026-09-28', 150),
     /* --- 29 Eylül Salı --- */
     T('Fransızca: Ensemble c\'est mieux 3. Cilt', 'fra', 'Ensemble c\'est mieux 3. cildi getir.', '2026-09-29', 50),
+    T('Tarih: Sayfa 4–7 ve 16–17', 'sto', '4, 5, 6, 7 ve 16, 17. sayfaları çalış.', '2026-09-29', 150),
     /* --- 30 Eylül Çarşamba --- */
-    T('Görsel Sanatlar: Fotoğraf + Aydınger Kâğıdı', 'art', 'Yakın çekim bir fotoğrafının siyah-beyaz fotokopisini ve aydınger kâğıdını getir.', '2026-09-30', 80),
+    T('Görsel Sanatlar: Önden Fotoğraf + Aydınger', 'art', 'Önden çekilmiş bir fotoğrafının siyah-beyaz fotokopisini ve aydınger kâğıdını getir.', '2026-09-30', 80),
     /* --- 1 Ekim Perşembe --- */
     T('Matematik: Sayfa 90–91 Alıştırmaları', 'mat', '90. sayfadaki 234–236 ve 91. sayfadaki 246–248. alıştırmaları yap. Her alıştırma için üç deneme yapmanın önemli olduğunu unutma.', '2026-10-01', 150),
     /* --- 6 Ekim Salı --- */
-    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', '3. sınıfa hazır defteri; güncellenmiş adres/telefon bilgileri ve şemalarla birlikte getir.', '2026-10-06', 100)
+    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', 'Üçüncü sınıf için hazırlanmış defteri getir. Rubrik güncel olmalı ve şemalar bulunmalı.', '2026-10-06', 100)
   ];
 }
 /* Gerçek sınavlar: 25 Eylül Cuma verificaciones */
@@ -295,7 +297,7 @@ function seedState(){
   const t = todayStr();
   const day = n => ymd(addDays(n));
   return {
-    version: 4,
+    version: 5,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
     xp: 0,
     totalXp: 0,
@@ -367,6 +369,17 @@ function migrate(s){
     s.redemptions = (s.redemptions || []).map(r => Object.assign(r, { cost: Math.max(0, Math.round((Number(r.cost) || 0) / 10)) }));
     s.level10RewardClaimed = !!s.level10RewardClaimed;
     s.version = 4;
+  }
+  if ((s.version || 1) < 5) {
+    /* Yeni paylaşılan ödev listesini mevcut veriyi bozmadan ekle/güncelle. */
+    const latest = realTasks();
+    s.tasks = s.tasks || [];
+    latest.forEach(nt => {
+      const old = s.tasks.find(t => t.title === nt.title || (nt.subject === 'art' && t.dueDate === nt.dueDate && t.subject === 'art'));
+      if (old) { old.desc = nt.desc; old.dueDate = nt.dueDate; old.subject = nt.subject; }
+      else s.tasks.push(nt);
+    });
+    s.version = 5;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
