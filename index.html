@@ -295,9 +295,12 @@ function seedState(){
   const t = todayStr();
   const day = n => ymd(addDays(n));
   return {
-    version: 3,
+    version: 4,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
     xp: 0,
+    totalXp: 0,
+    gold: 0,
+    level10RewardClaimed: false,
     streak: 0,
     lastCompletionDate: null,
     history: [],
@@ -305,17 +308,17 @@ function seedState(){
     exams: realExams(),
     schedule: realSchedule(),
     rewards: [
-      { id: uid(), title:'Sevdiği Atıştırmalığı Seç', cost:150, icon:'🍫', active:true },
-      { id: uid(), title:'30 Dakika Ek Oyun', cost:200, icon:'🎮', active:true },
-      { id: uid(), title:'1 Saat Oyun Konsolu',   cost:300,  icon:'🎮', active:true },
-      { id: uid(), title:'Akşam Yemeğini Seç', cost:400, icon:'🍔', active:true },
-      { id: uid(), title:'Gece Kuşu: Hafta sonu 1 saat geç yatma', cost:500, icon:'🌙', active:true },
-      { id: uid(), title:'Hype Günü', cost:600, icon:'🤸', active:true },
-      { id: uid(), title:'Pizza Gecesi',          cost:750,  icon:'🍕', active:true },
-      { id: uid(), title:'Sinema Gecesi',         cost:1000, icon:'🎬', active:true },
-      { id: uid(), title:'Sushi Günü',            cost:1000, icon:'🍣', active:true },
-      { id: uid(), title:'Sürpriz Aktivite',      cost:1500, icon:'🎯', active:true },
-      { id: uid(), title:'Büyük Ödül',            cost:2000, icon:'🎁', active:true }
+      { id: uid(), title:'Sevdiği Atıştırmalığı Seç', cost:15, icon:'🍫', active:true },
+      { id: uid(), title:'30 Dakika Ek Oyun', cost:20, icon:'🎮', active:true },
+      { id: uid(), title:'1 Saat Oyun Konsolu',   cost:30,  icon:'🎮', active:true },
+      { id: uid(), title:'Akşam Yemeğini Seç', cost:40, icon:'🍔', active:true },
+      { id: uid(), title:'Gece Kuşu: Hafta sonu 1 saat geç yatma', cost:50, icon:'🌙', active:true },
+      { id: uid(), title:'Hype Günü', cost:60, icon:'🤸', active:true },
+      { id: uid(), title:'Pizza Gecesi',          cost:75,  icon:'🍕', active:true },
+      { id: uid(), title:'Sinema Gecesi',         cost:100, icon:'🎬', active:true },
+      { id: uid(), title:'Sushi Günü',            cost:100, icon:'🍣', active:true },
+      { id: uid(), title:'Sürpriz Aktivite',      cost:150, icon:'🎯', active:true },
+      { id: uid(), title:'Büyük Ödül',            cost:200, icon:'🎁', active:true }
     ],
     redemptions: [],
     badges: {},
@@ -355,9 +358,22 @@ function migrate(s){
     ['boss','streak3','streak7','exam'].forEach(id => { if (s.badges) delete s.badges[id]; });
     s.version = 3;
   }
+  if ((s.version || 1) < 4) {
+    /* XP artık seviye ilerlemesi; harcanan para ayrı olarak altın. */
+    const oldXp = Math.max(0, Number(s.xp) || 0);
+    if (typeof s.totalXp !== 'number') s.totalXp = oldXp;
+    if (typeof s.gold !== 'number') s.gold = Math.floor(oldXp / 10);
+    s.rewards = (s.rewards || []).map(r => Object.assign(r, { cost: Math.max(1, Math.round((Number(r.cost) || 0) / 10)) }));
+    s.redemptions = (s.redemptions || []).map(r => Object.assign(r, { cost: Math.max(0, Math.round((Number(r.cost) || 0) / 10)) }));
+    s.level10RewardClaimed = !!s.level10RewardClaimed;
+    s.version = 4;
+  }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
   s.badges = s.badges || {}; s.alarmsLast = s.alarmsLast || {};
+  s.totalXp = Math.max(0, Number(s.totalXp) || Number(s.xp) || 0);
+  s.gold = Math.max(0, Number(s.gold) || 0);
+  s.level10RewardClaimed = !!s.level10RewardClaimed;
   s.settings = Object.assign({ pin:'1234', notify:false, firebase:null }, s.settings || {});
   s.student = s.student || { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' };
   /* Eski ders anahtarlarını yeni sisteme taşı */
@@ -437,10 +453,20 @@ function fbDisconnect(){
 }
 
 /* ---------- Seviye / Rozet / Seri ---------- */
+const LEVEL_THRESHOLDS = [0, 500, 1200, 2200, 3500, 5200, 7500, 10500, 14500, 20000];
+function goldForXp(xp){ return Math.max(1, Math.round((Number(xp) || 0) / 10)); }
 function levelOf(xp){
-  const level = Math.floor(xp / 500) + 1;
-  const into = xp % 500;
-  return { level, title: LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)], into, need: 500, pct: Math.round(into / 500 * 100) };
+  const value = Math.max(0, Number(xp) || 0);
+  let level = 1;
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (value >= LEVEL_THRESHOLDS[i]) { level = i + 1; break; }
+  }
+  const floor = LEVEL_THRESHOLDS[level - 1];
+  const max = level >= LEVEL_THRESHOLDS.length;
+  const next = max ? floor : LEVEL_THRESHOLDS[level];
+  const need = Math.max(1, next - floor);
+  const into = max ? need : Math.max(0, value - floor);
+  return { level, title: LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)], into, need, pct: max ? 100 : Math.min(100, Math.round(into / need * 100)), max, total: value };
 }
 const BADGES = [
   { id:'first',   icon:'flag',                  name:'İlk Ganimet',   desc:'İlk görevini tamamla',            cond: () => doneCount() >= 1 },
@@ -450,7 +476,7 @@ const BADGES = [
   { id:'exam10',  icon:'workspace_premium',     name:'Kusursuz Zafer',desc:'Bir sınavdan 10 al',               cond: () => state.exams.some(e => e.score >= 10) },
   { id:'boss8',   icon:'skull',                 name:'Boss Avcısı',   desc:'Boss sınavından 8 veya üzeri al', cond: () => passedBoss() >= 1 },
   { id:'boss3',   icon:'swords',                name:'Boss Ustası',   desc:'3 Boss sınavından 8+ al',         cond: () => passedBoss() >= 3 },
-  { id:'xp1k',    icon:'bolt',                  name:'1000 XP',       desc:'Toplam 1000 XP topla',            cond: () => state.xp >= 1000 },
+  { id:'xp1k',    icon:'bolt',                  name:'1000 XP',       desc:'Toplam 1000 XP topla',            cond: () => (state.totalXp || 0) >= 1000 },
   { id:'reward',  icon:'redeem',                name:'Ödül Avcısı',   desc:'İlk ödülünü kazan',               cond: () => state.redemptions.length >= 1 }
 ];
 function doneCount(){ return state.tasks.filter(t => t.status === 'completed').length; }
@@ -645,7 +671,7 @@ function subjectChip(s){
   return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary-container text-[12px] font-extrabold uppercase tracking-tight">' + sub.name + '</span>';
 }
 function xpBadge(xp){
-  return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-tertiary-fixed text-[12px] font-extrabold">+' + xp + ' XP</span>';
+  return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-tertiary-fixed text-[12px] font-extrabold">+' + xp + ' XP · +' + goldForXp(xp) + ' 🪙</span>';
 }
 function statusChip(t){
   if (t.status === 'pending') return '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">hourglass_top</span>Onay Bekliyor</span>';
@@ -703,7 +729,7 @@ function openTaskDetail(id){
       '</div>' +
       '<p class="text-[14px] font-semibold text-on-surface leading-relaxed bg-surface-container-lowest rounded-lg p-3">' + esc(t.desc || 'Açıklama yok') + '</p>' +
       '<div class="grid grid-cols-2 gap-2">' +
-        '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Ödül</span><p class="text-[15px] font-extrabold text-primary-container">+' + t.xp + ' XP</p></div>' +
+        '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Ödül</span><p class="text-[15px] font-extrabold text-primary-container">+' + t.xp + ' XP · +' + goldForXp(t.xp) + ' 🪙</p></div>' +
         '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Son Tarih</span><p class="text-[13px] font-extrabold text-on-surface">' + esc(fmtDue(t)) + '</p></div>' +
       '</div>' +
       '<div class="flex justify-center">' + statusChip(t) + '</div>' +
@@ -748,9 +774,9 @@ function bossAlarmCard(){
 function renderHeader(){
   const isParent = ui.role === 'parent';
   $('#header-sub').textContent = VIEW_TITLES[ui.view] || 'Görevler';
-  const lv = levelOf(state.xp);
+  const lv = levelOf(state.totalXp);
   $('#lvl-chip-text').textContent = 'LVL ' + lv.level;
-  $('#lvl-chip').title = 'Toplam ' + nf(state.xp) + ' XP • Seviye ' + lv.level;
+  $('#lvl-chip').title = 'Toplam ' + nf(state.totalXp) + ' XP • Seviye ' + lv.level;
   $('#lvl-chip').style.display = isParent ? 'none' : 'flex';
   const bs = isParent, ss = !isParent;
   $('#role-student').className = 'px-2.5 py-1.5 rounded-full text-[12px] font-extrabold transition-all flex items-center gap-1 ' + (ss ? 'bg-primary-container text-on-primary-container shadow-[0_0_12px_rgba(0,255,136,0.4)]' : 'text-on-surface-variant hover:text-on-surface');
@@ -773,7 +799,7 @@ function renderNav(){
    ÖĞRENCİ EKRANLARI
    ============================================================ */
 function renderHome(){
-  const lv = levelOf(state.xp);
+  const lv = levelOf(state.totalXp);
   const t0 = todayStr();
   const today = state.tasks.filter(t => t.status === 'active' && (t.dueDate === t0 || isOverdue(t)));
   const pending = state.tasks.filter(t => t.status === 'pending');
@@ -1007,7 +1033,7 @@ function renderSinavlar(){
 
 /* ---- Ödüller ---- */
 function renderOduller(){
-  const lv = levelOf(state.xp);
+  const lv = levelOf(state.totalXp);
   const ws = weekStats();
   const badgesHtml = BADGES.map(b => {
     const un = !!state.badges[b.id];
@@ -1019,23 +1045,27 @@ function renderOduller(){
   }).join('');
   const store = state.rewards.filter(r => r.active !== false);
   const storeHtml = store.length ? store.map(r => {
-    const can = state.xp >= r.cost;
+    const can = state.gold >= r.cost;
     return '<div class="card flex items-center gap-3">' +
       '<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-2xl shrink-0">' + (r.icon || '🎁') + '</div>' +
       '<div class="flex-1 min-w-0"><p class="text-[15px] font-bold text-primary truncate">' + esc(r.title) + '</p>' +
-      '<p class="text-[12px] font-extrabold text-tertiary-fixed">' + nf(r.cost) + ' XP</p></div>' +
+      '<p class="text-[12px] font-extrabold text-tertiary-fixed">' + nf(r.cost) + ' 🪙 altın</p></div>' +
       (can
         ? '<button onclick="redeemReward(\'' + r.id + '\')" class="flex items-center gap-1 py-2 px-3.5 rounded-full bg-secondary-container text-on-secondary text-[12px] font-extrabold shadow-[0_3px_0_#572000] active:translate-y-0.5 transition-all shrink-0"><span class="material-symbols-outlined text-base">redeem</span>Takas Et</button>'
-        : '<div class="flex flex-col items-end shrink-0"><span class="text-[11px] font-extrabold text-error">' + nf(r.cost - state.xp) + ' XP kaldı</span><div class="w-20 h-1.5 rounded-full bg-surface-container-highest mt-1 overflow-hidden"><div class="h-full bg-primary-container" style="width:' + Math.min(100, Math.round(state.xp / r.cost * 100)) + '%"></div></div></div>') +
+        : '<div class="flex flex-col items-end shrink-0"><span class="text-[11px] font-extrabold text-error">' + nf(r.cost - state.gold) + ' altın kaldı</span><div class="w-20 h-1.5 rounded-full bg-surface-container-highest mt-1 overflow-hidden"><div class="h-full bg-primary-container" style="width:' + Math.min(100, Math.round(state.gold / r.cost * 100)) + '%"></div></div></div>') +
     '</div>';
   }).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Ödül mağazası henüz boş — Komutanın ödül eklemesi gerekiyor.</div>';
+  const level10Html = lv.max ? '<div class="relative overflow-hidden rounded-lg bg-gradient-to-br from-secondary-container/25 to-tertiary-fixed-dim/20 p-4 ring-2 ring-secondary-container shadow-[0_0_22px_rgba(254,107,0,0.25)]">' +
+    '<div class="absolute -right-8 -top-8 text-7xl opacity-20">🏆</div><div class="relative flex items-center gap-3"><div class="text-4xl">🏆</div><div class="flex-1"><p class="text-[12px] font-extrabold uppercase tracking-wider text-secondary-fixed">Seviye 10 dönüm noktası</p><h3 class="text-[19px] font-extrabold text-primary">Büyük Ödül açıldı!</h3><p class="text-[12px] font-semibold text-on-surface-variant">Rüzgar, seçtiğiniz büyük ödülü almak için Komutanına istek gönderebilir.</p></div></div>' +
+    (state.level10RewardClaimed ? '<div class="mt-3 rounded-full bg-primary-container/15 px-3 py-2 text-center text-[12px] font-extrabold text-primary-container">İSTEK GÖNDERİLDİ ✓</div>' : '<button onclick="claimLevel10Reward()" class="mt-3 w-full py-2.5 rounded-full bg-secondary-container text-on-secondary text-[13px] font-extrabold shadow-[0_3px_0_#572000]"><span class="material-symbols-outlined text-base align-middle">redeem</span> Büyük Ödülü İste</button>') +
+    '</div>' : '';
   const redemptions = state.redemptions.slice().reverse();
   const redHtml = redemptions.length ? redemptions.map(r => {
     const st = r.status === 'pending' ? '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold">ONAY BEKLİYOR</span>'
       : r.status === 'approved' ? '<span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[10px] font-extrabold">KAZANILDI ✓</span>'
-      : '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold">İPTAL (XP iade)</span>';
+      : '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold">İPTAL (altın iade)</span>';
     return '<div class="flex items-center justify-between gap-2 py-2 border-b border-surface-container-highest/50 last:border-0">' +
-      '<div class="min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + (r.icon || '🎁') + ' ' + esc(r.title) + '</p><p class="text-[11px] font-semibold text-on-surface-variant">' + esc(r.date) + ' • -' + nf(r.cost) + ' XP</p></div>' + st + '</div>';
+      '<div class="min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + (r.icon || '🎁') + ' ' + esc(r.title) + '</p><p class="text-[11px] font-semibold text-on-surface-variant">' + esc(r.date) + ' • -' + nf(r.cost) + ' 🪙</p></div>' + st + '</div>';
   }).join('') : '';
 
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
@@ -1054,16 +1084,16 @@ function renderOduller(){
           '</div>' +
         '</div>' +
         '<div class="flex flex-col gap-1.5 bg-surface-container-lowest/80 rounded p-2.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">' +
-          '<div class="flex justify-between items-center"><span class="text-[12px] font-extrabold uppercase text-primary-container flex items-center gap-1"><span class="material-symbols-outlined text-sm">stars</span>Deneyim</span>' +
-          '<span class="text-[15px] font-extrabold text-tertiary-fixed">' + nf(state.xp) + ' <span class="text-[12px] font-semibold text-on-surface-variant">XP</span></span></div>' +
+          '<div class="flex justify-between items-center"><span class="text-[12px] font-extrabold uppercase text-primary-container flex items-center gap-1"><span class="material-symbols-outlined text-sm">stars</span>Toplam Deneyim</span>' +
+          '<span class="text-[15px] font-extrabold text-tertiary-fixed">' + nf(state.totalXp) + ' <span class="text-[12px] font-semibold text-on-surface-variant">XP</span></span></div>' +
           '<div class="relative w-full h-4 bg-surface-container rounded-full overflow-hidden p-0.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">' +
             '<div class="h-full rounded-full bg-gradient-to-r from-primary-fixed-dim via-primary-container to-tertiary-fixed-dim shadow-[0_0_12px_rgba(0,255,136,0.6)] flex items-center justify-end transition-all duration-500" style="width:' + Math.max(4, lv.pct) + '%;">' +
               '<div class="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_#fff] mr-0.5 animate-pulse"></div></div></div>' +
-          '<div class="flex justify-between text-[12px] font-semibold text-on-surface-variant"><span class="flex items-center gap-1 text-tertiary-fixed-dim"><span class="material-symbols-outlined text-xs">keyboard_double_arrow_up</span>Seviye ' + (lv.level + 1) + ' yakın!</span><span>' + (lv.need - lv.into) + ' XP kaldı</span></div>' +
+          '<div class="flex justify-between text-[12px] font-semibold text-on-surface-variant"><span class="flex items-center gap-1 text-tertiary-fixed-dim"><span class="material-symbols-outlined text-xs">keyboard_double_arrow_up</span>' + (lv.max ? 'Maksimum seviye!' : 'Seviye ' + (lv.level + 1) + ' yakın!') + '</span><span>' + (lv.max ? '🏆 Büyük ödül açıldı' : (lv.need - lv.into) + ' XP kaldı') + '</span></div>' +
         '</div>' +
         '<div class="grid grid-cols-3 gap-2">' +
           '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-primary-container text-xl mb-0.5">task_alt</span><span class="text-[18px] font-extrabold text-primary leading-none">' + ws.n + '</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">HAFTALIK GÖREV</span></div>' +
-          '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-secondary-container text-xl mb-0.5">bolt</span><span class="text-[18px] font-extrabold text-primary leading-none">+' + nf(ws.xp) + '</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">HAFTALIK XP</span></div>' +
+          '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-secondary-container text-xl mb-0.5">bolt</span><span class="text-[18px] font-extrabold text-primary leading-none">+' + nf(state.gold) + ' 🪙</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">ALTIN BAKİYESİ</span></div>' +
           '<div class="flex flex-col items-center p-2 rounded bg-surface-container text-center shadow-[0_3px_0_#0a0e18]"><span class="material-symbols-outlined text-tertiary-fixed-dim text-xl mb-0.5">local_fire_department</span><span class="text-[18px] font-extrabold text-primary leading-none">' + state.streak + '</span><span class="text-[10px] font-semibold text-on-surface-variant mt-0.5">GÜN SERİ</span></div>' +
         '</div>' +
       '</div>' +
@@ -1074,9 +1104,10 @@ function renderOduller(){
       '<div class="grid grid-cols-4 gap-2">' + badgesHtml + '</div>' +
     '</div>' +
     /* Ödül mağazası */
+    level10Html +
     '<div class="flex flex-col gap-2">' +
       '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">storefront</span>Ganimet Mağazası</h3>' +
-      '<p class="text-[12px] font-semibold text-on-surface-variant">XP\'lerini gerçek ödüllerle takas et — Komutanın onaylar 🛡️</p>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">Altınlarını gerçek ödüllerle takas et — Komutanın onaylar 🛡️</p>' +
       '<div class="flex flex-col gap-2.5">' + storeHtml + '</div>' +
     '</div>' +
     (redHtml ? '<div class="card"><h4 class="text-[14px] font-bold text-on-surface mb-1">Takas Geçmişi</h4>' + redHtml + '</div>' : '') +
@@ -1084,14 +1115,21 @@ function renderOduller(){
 }
 function redeemReward(id){
   const r = state.rewards.find(x => x.id === id); if (!r) return;
-  if (state.xp < r.cost) { toast('Yetersiz XP!'); return; }
-  askConfirm('Ödülü takas et', '"' + r.title + '" için ' + nf(r.cost) + ' XP harcanacak ve Komutanın onayına gönderilecek. Onaylanmazsa XP iade edilir.', () => {
-    state.xp -= r.cost;
+  if (state.gold < r.cost) { toast('Yetersiz altın!'); return; }
+  askConfirm('Ödülü takas et', '"' + r.title + '" için ' + nf(r.cost) + ' altın harcanacak ve Komutanın onayına gönderilecek. Onaylanmazsa altın iade edilir.', () => {
+    state.gold -= r.cost;
     state.redemptions.push({ id: uid(), rewardId: r.id, title: r.title, icon: r.icon, cost: r.cost, status: 'pending', date: todayStr() });
     checkBadges(); save(); renderAll();
     toast('🎁 Takas talebi gönderildi! Komutan onayı bekleniyor.');
     beep(true);
   }, 'Takas Et');
+}
+function claimLevel10Reward(){
+  const lv = levelOf(state.totalXp);
+  if (!lv.max || state.level10RewardClaimed) return;
+  state.level10RewardClaimed = true;
+  state.redemptions.push({ id: uid(), title:'Seviye 10 Büyük Ödül', icon:'🏆', cost:0, status:'pending', date:todayStr(), levelReward:true });
+  save(); renderAll(); toast('🏆 Büyük ödül isteği Komutanına gönderildi!'); beep(true);
 }
 
 /* ============================================================
@@ -1108,7 +1146,7 @@ function renderPanel(){
   const approvalCard = (kind, item) => {
     const isTask = kind === 'task';
     const title = isTask ? item.title : item.title;
-    const meta = isTask ? (SUBJECTS[item.subject] || {}).name + ' • +' + item.xp + ' XP • ' + esc(fmtDue(item)) : item.icon + ' • -' + nf(item.cost) + ' XP';
+    const meta = isTask ? (SUBJECTS[item.subject] || {}).name + ' • +' + item.xp + ' XP / +' + goldForXp(item.xp) + ' 🪙 • ' + esc(fmtDue(item)) : item.icon + ' • -' + nf(item.cost) + ' 🪙';
     return '<div class="card flex flex-col gap-2">' +
       '<div class="flex items-start justify-between gap-2">' +
         '<div class="min-w-0"><p class="text-[15px] font-extrabold text-primary truncate">' + esc(title) + '</p>' +
@@ -1361,6 +1399,8 @@ function deleteExam(id){
     const exam = state.exams.find(e => e.id === id);
     if (exam && exam.awardedXp) {
       state.xp = Math.max(0, state.xp - exam.awardedXp);
+      state.totalXp = Math.max(0, state.totalXp - exam.awardedXp);
+      state.gold = Math.max(0, state.gold - goldForXp(exam.awardedXp));
       removeHistory(exam.awardedXp, exam.awardedAt);
     }
     state.exams = state.exams.filter(e => e.id !== id);
@@ -1390,9 +1430,11 @@ function recordExamScore(id){
     else state.history.push({ d: earnedAt, xp: bonus, n:1 });
   }
   state.xp = Math.max(0, state.xp + bonus - previous);
+  state.totalXp = Math.max(0, state.totalXp + bonus - previous);
+  state.gold = Math.max(0, state.gold + goldForXp(bonus) - goldForXp(previous));
   e.score = score; e.awardedXp = bonus; e.awardedAt = bonus ? earnedAt : null;
   pruneBadges(); checkBadges(); save(); renderAll();
-  toast('📋 Not kaydedildi: ' + nf(score) + '/10 • ' + (bonus >= previous ? '+' : '') + (bonus - previous) + ' XP');
+  toast('📋 Not kaydedildi: ' + nf(score) + '/10 • ' + (bonus >= previous ? '+' : '') + (bonus - previous) + ' XP / ' + (goldForXp(bonus) - goldForXp(previous) >= 0 ? '+' : '') + (goldForXp(bonus) - goldForXp(previous)) + ' 🪙');
 }
 function submitSchedule(){
   const title = $('#sf-title').value.trim();
@@ -1418,7 +1460,7 @@ function renderOdulmgr(){
     '<div class="flex items-center gap-2.5 py-2.5 border-b border-surface-container-highest/50 last:border-0">' +
       '<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-xl shrink-0">' + (r.icon || '🎁') + '</div>' +
       '<div class="flex-1 min-w-0"><p class="text-[14px] font-bold text-primary truncate">' + esc(r.title) + '</p>' +
-      '<p class="text-[12px] font-extrabold text-tertiary-fixed">' + nf(r.cost) + ' XP</p></div>' +
+      '<p class="text-[12px] font-extrabold text-tertiary-fixed">' + nf(r.cost) + ' 🪙 altın</p></div>' +
       '<button onclick="toggleReward(\'' + r.id + '\')" class="px-2.5 py-1.5 rounded-full text-[10px] font-extrabold shrink-0 ' + (r.active !== false ? 'bg-primary-container/15 text-primary-container' : 'bg-surface-container-high text-on-surface-variant') + '">' + (r.active !== false ? 'MAĞAZADA' : 'PASİF') + '</button>' +
       '<button onclick="deleteReward(\'' + r.id + '\')" class="p-2 rounded-full bg-error-container/15 text-error shrink-0"><span class="material-symbols-outlined text-base">delete</span></button>' +
     '</div>'
@@ -1428,7 +1470,7 @@ function renderOdulmgr(){
     const st = r.status === 'pending' ? 'ONAY BEKLİYOR' : r.status === 'approved' ? 'ONAYLANDI ✓' : 'REDDEDİLDİ';
     const cls = r.status === 'pending' ? 'text-tertiary-fixed-dim' : r.status === 'approved' ? 'text-primary-container' : 'text-error';
     return '<div class="flex items-center justify-between gap-2 py-2 border-b border-surface-container-highest/50 last:border-0">' +
-      '<div class="min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + (r.icon || '🎁') + ' ' + esc(r.title) + '</p><p class="text-[11px] font-semibold text-on-surface-variant">' + esc(r.date) + ' • -' + nf(r.cost) + ' XP</p></div>' +
+      '<div class="min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + (r.icon || '🎁') + ' ' + esc(r.title) + '</p><p class="text-[11px] font-semibold text-on-surface-variant">' + esc(r.date) + ' • -' + nf(r.cost) + ' 🪙</p></div>' +
       (r.status === 'pending'
         ? '<div class="flex gap-1.5 shrink-0"><button onclick="approveRedeem(\'' + r.id + '\')" class="px-2.5 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[10px] font-extrabold">ONAYLA</button>' +
           '<button onclick="rejectRedeem(\'' + r.id + '\')" class="px-2.5 py-1.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold">RED</button></div>'
@@ -1443,7 +1485,7 @@ function renderOdulmgr(){
         '<div><label class="lbl">Simge</label><input id="rf-icon" class="inp !px-2 text-center text-xl" value="🎁" maxlength="4"></div>' +
         '<div><label class="lbl">Ödül Adı *</label><input id="rf-title" class="inp" placeholder="Örn: 1 Saat Oyun Konsolu"></div>' +
       '</div>' +
-      '<div><label class="lbl">XP Fiyatı *</label><input id="rf-cost" type="number" min="10" max="100000" step="50" value="500" class="inp !w-32"></div>' +
+      '<div><label class="lbl">Altın Fiyatı *</label><input id="rf-cost" type="number" min="1" max="100000" step="5" value="50" class="inp !w-32"></div>' +
       '<button onclick="submitReward()" class="btn-green"><span class="material-symbols-outlined">add_shopping_cart</span>Mağazaya Ekle</button>' +
     '</div>' +
     '<section class="card"><h3 class="text-[15px] font-extrabold text-primary mb-1">Ödül Mağazası</h3>' + (rows || '<p class="text-[13px] font-semibold text-on-surface-variant py-2">Mağaza boş.</p>') + '</section>' +
@@ -1582,6 +1624,9 @@ function resetData(){
 function resetProgress(){
   askConfirm('RUZ İLERLEMESİNİ SIFIRLA', 'XP, seviye, seri, rozetler, tamamlanma durumları ve takas geçmişi sıfırlanacak. Görev listesi, sınavlar, program ve ödüller korunacak. Devam edilsin mi?', () => {
     state.xp = 0;
+    state.totalXp = 0;
+    state.gold = 0;
+    state.level10RewardClaimed = false;
     state.streak = 0;
     state.lastCompletionDate = null;
     state.history = [];
@@ -1598,9 +1643,11 @@ function approveTask(id){
   const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'pending') return;
   t.status = 'completed'; t.completedAt = todayStr();
   state.xp += t.xp;
+  state.totalXp += t.xp;
+  state.gold += goldForXp(t.xp);
   addHistory(t.xp); bumpStreak(); checkBadges(); save();
   renderAll();
-  toast('✅ Onaylandı! +' + t.xp + ' XP • ' + nf(state.xp) + ' XP toplam');
+  toast('✅ Onaylandı! +' + t.xp + ' XP • +' + goldForXp(t.xp) + ' 🪙 altın');
   beep(false);
 }
 function rejectTask(id){
@@ -1614,6 +1661,8 @@ function undoCompletedTask(id){
   askConfirm('Tamamlamayı geri al', '"' + t.title + '" yeniden aktif olacak. Verilen ' + nf(t.xp) + ' XP geri alınacak; seri ve rozetler yeniden hesaplanacak.', () => {
     const oldBadgeCount = Object.keys(state.badges).length;
     state.xp = Math.max(0, state.xp - t.xp);
+    state.totalXp = Math.max(0, state.totalXp - t.xp);
+    state.gold = Math.max(0, state.gold - goldForXp(t.xp));
     removeHistory(t.xp, t.completedAt);
     t.status = 'active';
     t.completedAt = null;
@@ -1621,7 +1670,7 @@ function undoCompletedTask(id){
     pruneBadges();
     const removedBadges = oldBadgeCount - Object.keys(state.badges).length;
     save(); renderAll();
-    toast('↩️ Görev geri alındı • -' + nf(t.xp) + ' XP' + (removedBadges > 0 ? ' • ' + removedBadges + ' rozet kilitlendi' : ''));
+    toast('↩️ Görev geri alındı • -' + nf(t.xp) + ' XP / -' + goldForXp(t.xp) + ' 🪙' + (removedBadges > 0 ? ' • ' + removedBadges + ' rozet kilitlendi' : ''));
   }, 'Geri Al');
 }
 function approveRedeem(id){
@@ -1631,20 +1680,20 @@ function approveRedeem(id){
   beep(false);
 }
 function rejectRedeem(id){
-  askConfirm('Takası reddet', 'Harcanan ' + nf(state.redemptions.find(x => x.id === id).cost) + ' XP geri iade edilecek.', () => {
+  askConfirm('Takası reddet', 'Harcanan ' + nf(state.redemptions.find(x => x.id === id).cost) + ' altın geri iade edilecek.', () => {
     const r = state.redemptions.find(x => x.id === id); if (!r) return;
-    r.status = 'rejected'; state.xp += r.cost;
-    save(); renderAll(); toast('Takas reddedildi, XP iade edildi');
+    r.status = 'rejected'; state.gold += r.cost;
+    save(); renderAll(); toast('Takas reddedildi, altın iade edildi');
   }, 'Reddet');
 }
 
 /* ---------- Öğrenci görev tamamlama ---------- */
 function completeTask(id){
   const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'active') return;
-  askConfirm('Görev bitti mi?', '"' + t.title + '" onaya gönderilecek. Komutanın onaylamasıyla +' + t.xp + ' XP hesabına geçecek!', () => {
+  askConfirm('Görev bitti mi?', '"' + t.title + '" onaya gönderilecek. Komutanın onaylamasıyla +' + t.xp + ' XP ve +' + goldForXp(t.xp) + ' 🪙 hesabına geçecek!', () => {
     t.status = 'pending'; t.completedAt = null;
     save(); renderAll();
-    toast('📨 Görev onaya gönderildi! Onay gelince XP\'n hesabına geçecek ⚡');
+    toast('📨 Görev onaya gönderildi! Onay gelince XP ve altın hesabına geçecek ⚡');
     beep(true);
   }, 'Gönder');
 }
