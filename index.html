@@ -418,7 +418,11 @@ function migrate(s){
   }
   if ((s.version || 1) < 7) {
     /* Eski görevlerde altın XP'den bağımsız standarda taşınır. */
-    (s.tasks || []).forEach(t => { if (typeof t.gold !== 'number') t.gold = taskGold(t); });
+    (s.tasks || []).forEach(t => {
+      if (typeof t.gold === 'number') return;
+      /* Tamamlanan eski görevlerin geçmiş bakiyesi bozulmasın; yeni standardı yalnızca aktif/bekleyenlere uygula. */
+      t.gold = t.status === 'completed' ? Math.max(1, Math.round((Number(t.xp) || 0) / 10)) : taskGold(t);
+    });
     s.version = 7;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
