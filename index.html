@@ -1328,8 +1328,7 @@ function renderGorev(){
     '<div class="flex flex-col gap-2.5">' +
       (active.length ? active.map(t =>
         '<div class="card">' + taskCard(t) +
-        '<button onclick="editTaskDetails(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-tertiary-container/15 text-tertiary-fixed-dim text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
-        '<button onclick="editTaskReward(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">tune</span>XP / Altın Düzenle</button>' +
+        '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
         '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') +
     '</div>' +
@@ -1337,8 +1336,7 @@ function renderGorev(){
     '<div class="flex flex-col gap-2.5">' +
       (completed.length ? completed.map(t =>
         '<div class="card">' + taskCard(t) +
-        '<button onclick="editTaskDetails(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-tertiary-container/15 text-tertiary-fixed-dim text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
-        '<button onclick="editTaskReward(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">tune</span>XP / Altın Düzenle</button>' +
+        '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
         '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') +
     '</div>' +
@@ -1395,8 +1393,11 @@ function editTaskReward(id){
   }
   save(); renderGorev(); toast('✅ Görev ödülü güncellendi: +' + t.xp + ' XP / +' + t.gold + ' 🪙');
 }
-function editTaskDetails(id){
+function editTaskAll(id){
   const t = state.tasks.find(x => x.id === id); if (!t) return;
+  const wasCompleted = t.status === 'completed';
+  const oldXp = Number(t.xp) || 0;
+  const oldGold = taskGold(t);
   const title = prompt('Görev başlığı:', t.title);
   if (title === null) return;
   const desc = prompt('Görev açıklaması:', t.desc || '');
@@ -1407,11 +1408,32 @@ function editTaskDetails(id){
   const time = prompt('Teslim saati (SS:DD):', t.dueTime || '21:00');
   if (time === null) return;
   if (!/^\d{2}:\d{2}$/.test(time)) { toast('Saat formatı geçersiz. Örnek: 21:00'); return; }
+  const xpRaw = prompt('XP ödülü:', String(t.xp));
+  if (xpRaw === null) return;
+  const goldRaw = prompt('Altın ödülü:', String(oldGold));
+  if (goldRaw === null) return;
+  const xp = Math.max(10, Math.min(5000, Number(xpRaw) || 0));
+  const gold = Math.max(0, Math.min(500, Number(goldRaw) || 0));
+  if (!xp) { toast('XP 0 olamaz.'); return; }
   t.title = title.trim() || t.title;
   t.desc = desc.trim();
   t.dueDate = date;
   t.dueTime = time;
-  save(); renderGorev(); toast('✅ Görev bilgileri güncellendi');
+  t.xp = Math.round(xp);
+  t.gold = Math.round(gold);
+  if (wasCompleted) {
+    const xpDelta = t.xp - oldXp;
+    const goldDelta = t.gold - oldGold;
+    state.xp = Math.max(0, state.xp + xpDelta);
+    state.totalXp = Math.max(0, state.totalXp + xpDelta);
+    state.gold = Math.max(0, state.gold + goldDelta);
+    if (t.completedAt && xpDelta) {
+      const h = state.history.find(x => x.d === t.completedAt);
+      if (h) h.xp = Math.max(0, h.xp + xpDelta);
+    }
+    pruneBadges(); checkBadges();
+  }
+  save(); renderGorev(); toast('✅ Görev tamamen güncellendi');
 }
 function deleteTask(id){
   askConfirm('Görevi sil', 'Bu görev kalıcı olarak silinecek. Emin misin?', () => {
