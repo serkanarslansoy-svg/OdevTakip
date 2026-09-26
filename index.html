@@ -1328,6 +1328,7 @@ function renderGorev(){
     '<div class="flex flex-col gap-2.5">' +
       (active.length ? active.map(t =>
         '<div class="card">' + taskCard(t) +
+        '<button onclick="editTaskDetails(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-tertiary-container/15 text-tertiary-fixed-dim text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
         '<button onclick="editTaskReward(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">tune</span>XP / Altın Düzenle</button>' +
         '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') +
@@ -1336,6 +1337,7 @@ function renderGorev(){
     '<div class="flex flex-col gap-2.5">' +
       (completed.length ? completed.map(t =>
         '<div class="card">' + taskCard(t) +
+        '<button onclick="editTaskDetails(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-tertiary-container/15 text-tertiary-fixed-dim text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
         '<button onclick="editTaskReward(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">tune</span>XP / Altın Düzenle</button>' +
         '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') +
@@ -1392,6 +1394,24 @@ function editTaskReward(id){
     pruneBadges(); checkBadges();
   }
   save(); renderGorev(); toast('✅ Görev ödülü güncellendi: +' + t.xp + ' XP / +' + t.gold + ' 🪙');
+}
+function editTaskDetails(id){
+  const t = state.tasks.find(x => x.id === id); if (!t) return;
+  const title = prompt('Görev başlığı:', t.title);
+  if (title === null) return;
+  const desc = prompt('Görev açıklaması:', t.desc || '');
+  if (desc === null) return;
+  const date = prompt('Teslim tarihi (YYYY-AA-GG):', t.dueDate || todayStr());
+  if (date === null) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(date + 'T00:00:00').getTime())) { toast('Tarih formatı geçersiz. Örnek: 2026-10-06'); return; }
+  const time = prompt('Teslim saati (SS:DD):', t.dueTime || '21:00');
+  if (time === null) return;
+  if (!/^\d{2}:\d{2}$/.test(time)) { toast('Saat formatı geçersiz. Örnek: 21:00'); return; }
+  t.title = title.trim() || t.title;
+  t.desc = desc.trim();
+  t.dueDate = date;
+  t.dueTime = time;
+  save(); renderGorev(); toast('✅ Görev bilgileri güncellendi');
 }
 function deleteTask(id){
   askConfirm('Görevi sil', 'Bu görev kalıcı olarak silinecek. Emin misin?', () => {
