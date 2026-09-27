@@ -1217,8 +1217,8 @@ function renderPanel(){
       '</div>' +
       (isTask && item.desc ? '<p class="text-[12px] font-semibold text-on-surface-variant bg-surface-container-lowest rounded p-2">' + esc(item.desc) + '</p>' : '') +
       '<div class="grid grid-cols-2 gap-2">' +
-        '<button onclick="approveTask(\'' + item.id + '\')" class="btn-green !py-2 text-[13px]"><span class="material-symbols-outlined text-base">check</span>Onayla</button>' +
-        '<button onclick="rejectTask(\'' + item.id + '\')" class="btn-ghost !py-2 text-[13px] text-error"><span class="material-symbols-outlined text-base">close</span>Reddet</button>' +
+        '<button onclick="' + (isTask ? 'approveTask' : 'approveRedeem') + '(\'' + item.id + '\')" class="btn-green !py-2 text-[13px]"><span class="material-symbols-outlined text-base">check</span>Onayla</button>' +
+        '<button onclick="' + (isTask ? 'rejectTask' : 'rejectRedeem') + '(\'' + item.id + '\')" class="btn-ghost !py-2 text-[13px] text-error"><span class="material-symbols-outlined text-base">close</span>Reddet</button>' +
       '</div>' +
     '</div>';
   };
