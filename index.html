@@ -1816,9 +1816,13 @@ function approveRedeem(id){
   beep(false);
 }
 function rejectRedeem(id){
-  askConfirm('Takası reddet', 'Harcanan ' + nf(state.redemptions.find(x => x.id === id).cost) + ' altın geri iade edilecek.', () => {
-    const r = state.redemptions.find(x => x.id === id); if (!r) return;
-    r.status = 'rejected'; state.gold += r.cost;
+  const r = state.redemptions.find(x => x.id === id);
+  if (!r) { toast('Ödül talebi bulunamadı; listeyi yenile.'); return; }
+  if (r.status !== 'pending') { toast('Bu ödül talebi zaten işlendi.'); return; }
+  const refund = Math.max(0, Number(r.cost) || 0);
+  askConfirm('Takası reddet', 'Harcanan ' + nf(refund) + ' altın geri iade edilecek.', () => {
+    r.status = 'rejected';
+    state.gold = Math.max(0, (Number(state.gold) || 0) + refund);
     save(); renderAll(); toast('Takas reddedildi, altın iade edildi');
   }, 'Reddet');
 }
