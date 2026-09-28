@@ -289,6 +289,7 @@ function realTasks(){
     T('İngilizce: Simple Past Fiil Tekrarı', 'ing', 'Tatil kitabını getir. İşlenen fiillerin Simple Past hâllerini olumlu, olumsuz ve soru cümlelerinde tekrar et.', '2026-09-28', 150),
     T('Matematik: Notlar + Geometri 3. Cilt', 'mat', 'Defterdeki notları iyice çalış ve geometri kitabının yeni 3. cildini getir.', '2026-09-28', 150),
     T('Coğrafya: Etkinlikler + Dünya Haritası', 'geo', '70. sayfa 3. etkinlik ve 71. sayfa 3. etkinliği yap. Sınıfta boyamak için siyah-beyaz bir dünya haritası/planisfer yazdır.', '2026-09-28', 150),
+    T('İtalyanca: Foscolo + Sognalibro Sayfaları', 'ita', '297, 298, 299 ve 302. sayfalarda Foscolo’nun hayatını çalış. Sognalibro’dan 296, 299 ve 311. sayfaları yap.', '2026-09-28', 150),
     /* --- 29 Eylül Salı --- */
     T('Fransızca: Ensemble c\'est mieux 3. Cilt', 'fra', 'Ensemble c\'est mieux 3. cildi getir.', '2026-09-29', 50),
     T('Tarih: Sayfa 4–7 ve 16–17', 'sto', '4, 5, 6, 7 ve 16, 17. sayfaları çalış.', '2026-09-29', 150),
@@ -296,6 +297,10 @@ function realTasks(){
     T('Görsel Sanatlar: Önden Fotoğraf + Aydınger', 'art', 'Önden çekilmiş bir fotoğrafının siyah-beyaz fotokopisini ve aydınger kâğıdını getir.', '2026-09-30', 80),
     /* --- 1 Ekim Perşembe --- */
     T('Matematik: Sayfa 90–91 Alıştırmaları', 'mat', '90. sayfadaki 234–236 ve 91. sayfadaki 246–248. alıştırmaları yap. Her alıştırma için üç deneme yapmanın önemli olduğunu unutma.', '2026-10-01', 150),
+    /* --- 2 Ekim Cuma --- */
+    T('Coğrafya: Sayfa 74–79 + Sayfa 75 Etkinlikleri', 'geo', '74–79. sayfaları çalış ve 75. sayfadaki etkinlikleri yap.', '2026-10-02', 150),
+    /* --- 5 Ekim Pazartesi --- */
+    T('Matematik: Sayfa 14, 16 ve 18 Alıştırmaları', 'mat', '14. sayfa 7. alıştırma; 16. sayfa 17 ve 21. alıştırmalar; 18. sayfa 45 ve 49. alıştırmalar zorunlu. BES/DSA için 18. sayfa 36 ve 52. alıştırmalar isteğe bağlıdır.', '2026-10-05', 200),
     /* --- 6 Ekim Salı --- */
     T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', 'Üçüncü sınıf için hazırlanmış defteri getir. Rubrik güncel olmalı ve şemalar bulunmalı.', '2026-10-06', 100)
   ];
@@ -313,7 +318,7 @@ function seedState(){
   const t = todayStr();
   const day = n => ymd(addDays(n));
   return {
-    version: 7,
+    version: 8,
     student: { name:'Rüzgar', nickname:'Ruz', grade:'Terza Media' },
     xp: 0,
     totalXp: 0,
@@ -427,6 +432,20 @@ function migrate(s){
       t.gold = t.status === 'completed' ? Math.max(1, Math.round((Number(t.xp) || 0) / 10)) : taskGold(t);
     });
     s.version = 7;
+  }
+  if ((s.version || 1) < 8) {
+    /* 28 Eylül–5 Ekim yeni okul ödevlerini mevcut listeye ekle. */
+    const latest = realTasks();
+    s.tasks = s.tasks || [];
+    latest.forEach(nt => {
+      const old = s.tasks.find(t => t.title === nt.title);
+      if (old) {
+        old.desc = nt.desc;
+        old.dueDate = nt.dueDate;
+        old.subject = nt.subject;
+      } else s.tasks.push(nt);
+    });
+    s.version = 8;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
