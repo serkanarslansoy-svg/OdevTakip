@@ -301,8 +301,14 @@ function realTasks(){
     T('Coğrafya: Sayfa 74–79 + Sayfa 75 Etkinlikleri', 'geo', '74–79. sayfaları çalış ve 75. sayfadaki etkinlikleri yap.', '2026-10-02', 150),
     /* --- 5 Ekim Pazartesi --- */
     T('Matematik: Sayfa 14, 16 ve 18 Alıştırmaları', 'mat', '14. sayfa 7. alıştırma; 16. sayfa 17 ve 21. alıştırmalar; 18. sayfa 45 ve 49. alıştırmalar zorunlu. BES/DSA için 18. sayfa 36 ve 52. alıştırmalar isteğe bağlıdır.', '2026-10-05', 200),
+    T('İngilizce: Past Continuous + Places in a Town', 'ing', 'Past Continuous konusunu 122 ve 123. sayfalardan çalış. 120. sayfadaki “places in a town” kelimelerini öğren. I Discover 3 kitabını getir.', '2026-10-05', 150),
+    T('İtalyanca: Foscolo’nun Eserleri', 'ita', 'Foscolo’nun 302–303. sayfalardaki eserlerini çalış. Sognalibro’dan 299–300. sayfaları ve Classroom’daki notları tekrar et.', '2026-10-05', 150),
     /* --- 6 Ekim Salı --- */
-    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', 'Üçüncü sınıf için hazırlanmış defteri getir. Rubrik güncel olmalı ve şemalar bulunmalı.', '2026-10-06', 100)
+    T('Fransızca: 3. Sınıf Defteri + Şemalar', 'fra', 'Üçüncü sınıf için hazırlanmış defteri getir. Rubrik güncel olmalı ve şemalar bulunmalı.', '2026-10-06', 100),
+    /* --- 7 Ekim Çarşamba --- */
+    T('İtalyanca: Romanzo Storico Tekrarı', 'ita', 'Romanzo storico ile ilgili sayfaları tekrar oku.', '2026-10-07', 80),
+    /* --- 8 Ekim Perşembe --- */
+    T('Matematik: Sayfa 101–102 Alıştırmaları', 'mat', '101. sayfadaki 410–412. alıştırmaları yap. 102. sayfadaki 431–434. alıştırmalardan BES/DSA öğrencileri en az iki tanesini yapmalı.', '2026-10-08', 150)
   ];
 }
 /* Gerçek sınavlar: 25 Eylül Cuma verificaciones */
@@ -446,6 +452,17 @@ function migrate(s){
       } else s.tasks.push(nt);
     });
     s.version = 8;
+  }
+  if ((s.version || 1) < 9) {
+    /* 5–8 Ekim yeni okul ödevleri. */
+    const latest = realTasks();
+    s.tasks = s.tasks || [];
+    latest.forEach(nt => {
+      const old = s.tasks.find(t => t.title === nt.title);
+      if (old) { old.desc = nt.desc; old.dueDate = nt.dueDate; old.subject = nt.subject; }
+      else s.tasks.push(nt);
+    });
+    s.version = 9;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
