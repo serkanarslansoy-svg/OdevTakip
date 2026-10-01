@@ -1,0 +1,10 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "odevAvci": {
+      ".read": "auth != null && auth.uid === 'AILE_UID'",
+      ".write": "auth != null && auth.uid === 'AILE_UID'"
+    }
+  }
+}

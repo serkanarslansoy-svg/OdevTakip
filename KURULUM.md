@@ -23,7 +23,7 @@ Tek dosyadır (`index.html`), kurulum gerektirmez, telefonda ve bilgisayarda ça
 | Mod | Kim kullanır? | Giriş |
 |---|---|---|
 | 🚀 **Ruz (Öğrenci)** | Oğlun | PIN gerekmez |
-| 🛡️ **Veli (Komutan)** | Sen | **PIN: `1234`** (değiştir!) |
+| 🛡️ **Veli (Komutan)** | Sen | 4 haneli PIN (ilk girişten sonra **Ayarlar**'dan değiştir; varsayılan değiştirilene kadar panelde uyarı çıkar) |
 
 Sağ üstteki **Ruz / Veli** düğmeleriyle geçiş yapılır.
 
@@ -36,10 +36,10 @@ Sağ üstteki **Ruz / Veli** düğmeleriyle geçiş yapılır.
 
 ### 🛡️ Veli ekranları (PIN ile)
 - **Panel:** Onay bekleyen görevler/takaslar, hızlı görev şablonları, son 7 gün grafiği
-- **Görev Ata:** Görev oluştur (ders, zorluk BOSS/NORMAL, XP, son tarih) → anında Ruz'un ekranına düşer
+- **Görev Ata:** Görev oluştur; **Toplu Ödev Ekle** ile öğretmen mesajını/Classroom listesini yapıştırıp tek seferde çok görev ekle (ders, zorluk BOSS/NORMAL, XP, son tarih) → anında Ruz'un ekranına düşer
 - **Planla:** Sınav tanımla (Boss seçimi ve alarm günü ayarlanır), geçmiş sınavın notunu gir/düzenle + haftalık ders programını yönet
 - **Ödül:** Mağazaya ödül ekle, takas taleplerini onayla/reddet
-- **Ayarlar:** PIN değiştir, bildirim izni, **Firebase senkron**, yedek al/geri yükle, sıfırla
+- **Ayarlar:** PIN değiştir, bildirim izni, **Firebase senkron**, **Aile Hesabı** girişi, yedek al/geri yükle, sıfırla
 
 ---
 
@@ -82,9 +82,27 @@ Bağlanınca:
 - Her değişiklik ~1 saniye içinde diğer cihaza yansır (header'da 🟢 **BULUT** rozeti).
 - Senkronu kapatmak istersen aynı ekrandan **Kes** düğmesine bas (veriler cihazda kalır).
 
-> ⚠️ Güvenlik notu: "Test mode" kuralları 30 gün sonra kapanır ve veri erişimi durur.
-> Uzun vadeli kullanım için Firebase konsolunda kuralları okuma/yazma olarak güncelleyip
-> tarih uzatman ya da basit kimlik doğrulama eklemen önerilir.
+Senkron yalnızca değişen alanları gönderir (ör. tek bir görevin durumu). İki cihazda aynı anda
+farklı işlemler yapılsa da biri diğerini silmez; çevrimdışıyken yapılan değişiklikler bağlantı
+gelince buluttaki verinin üstüne eklenir.
+
+### 🔒 Veriyi yalnızca ailene aç (önemli!)
+
+"Test mode" kuralları veritabanını adresi bilen **herkese** açar ve 30 gün sonra kapanır.
+Uygulama herkese açık bir sitede yayınlandığı için veritabanı adresi de görülebilir.
+Erişimi aile hesabıyla sınırla:
+
+1. Firebase Console → **Authentication** → *Get started* → *Sign-in method* → **Email/Password** → *Enable*.
+2. **Users** sekmesi → *Add user*: bir aile e-postası ve güçlü bir şifre.
+3. Uygulamada **Veli → Ayarlar → Aile Hesabı** → bu hesapla giriş yap.
+   **Hem kendi cihazında hem Ruz'un cihazında** giriş yap.
+4. Aynı ekranda görünen **UID**'yi kopyala.
+5. Realtime Database → **Rules** sekmesi → bu depodaki `database.rules.json` içeriğini yapıştır,
+   `AILE_UID` yerine kopyaladığın UID'yi yaz → **Publish**.
+
+Bundan sonra veriyi yalnızca bu hesapla giriş yapmış cihazlar okuyup yazabilir. Giriş yapmamış
+bir cihaz "Bulut erişimi reddedildi" uyarısı verir ve verileri yalnızca kendinde tutar.
+Sırayla yap: önce iki cihazda giriş, sonra kuralları yayınla.
 
 ---
 
@@ -123,8 +141,15 @@ Bağlanınca:
 ## ❓ SSS
 
 **PIN'i unuttum ne yapayım?**
-Cihazda `localStorage` temizlenirse PIN örnek değere (`1234`) döner; ya da Konsol'dan
-`JSON.parse(localStorage.odevAvciStateV1).settings.pin` ile mevcut PIN'i görebilirsin.
+PIN artık düz metin değil, özet (hash) olarak saklanır; geri okunamaz. Bilgisayarda uygulamayı
+açıp tarayıcı konsoluna `state.settings.pinHash = hashPin('YENİPIN'); save();` yazarak yeni PIN
+belirleyebilirsin (bulut bağlıysa diğer cihaza da geçer).
+
+**Toplu ödev eklemede ne tanınıyor?**
+Tarih satırları (`5 Ekim`, `05/10`, `7 Ottobre`, `Pazartesi`/`Lunedì`) ve Türkçe/İtalyanca ders
+adları (`Matematik`/`Matematica`, `Tarih`/`Storia`…). Tarih ya da ders adı tek başına bir satırdaysa
+altındaki satırlara uygulanır. "sınav/verifica" geçen satırlar BOSS (300 XP), "getir/portare" geçenler
+50 XP önerilir. Eklemeden önce her satırın dersini, tarihini ve XP'sini düzeltebilirsin.
 
 **Telefonda bildirim gelmiyor?**
 Sınavlar ekranından veya Ayarlar'dan **Bildirim İznini Aç** düğmesine bas; iOS'ta
