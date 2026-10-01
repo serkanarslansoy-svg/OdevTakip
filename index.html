@@ -299,6 +299,8 @@ function realTasks(){
     T('Matematik: Sayfa 90–91 Alıştırmaları', 'mat', '90. sayfadaki 234–236 ve 91. sayfadaki 246–248. alıştırmaları yap. Her alıştırma için üç deneme yapmanın önemli olduğunu unutma.', '2026-10-01', 150),
     /* --- 2 Ekim Cuma --- */
     T('Coğrafya: Sayfa 74–79 + Sayfa 75 Etkinlikleri', 'geo', '74–79. sayfaları çalış ve 75. sayfadaki etkinlikleri yap.', '2026-10-02', 150),
+    T('Fen Bilimleri: Sayfa 130–135 + Alıştırmalar', 'sci', '130–135. sayfaları iyice çalış ve alıştırmaları yap.', '2026-10-02', 150),
+    T('İtalyanca: Sayfa 71 + A2 Kitabı', 'ita', '71. sayfayı yap ve A2 kitabını getir.', '2026-10-02', 80),
     /* --- 5 Ekim Pazartesi --- */
     T('Matematik: Sayfa 14, 16 ve 18 Alıştırmaları', 'mat', '14. sayfa 7. alıştırma; 16. sayfa 17 ve 21. alıştırmalar; 18. sayfa 45 ve 49. alıştırmalar zorunlu. BES/DSA için 18. sayfa 36 ve 52. alıştırmalar isteğe bağlıdır.', '2026-10-05', 200),
     T('İngilizce: Past Continuous + Places in a Town', 'ing', 'Past Continuous konusunu 122 ve 123. sayfalardan çalış. 120. sayfadaki “places in a town” kelimelerini öğren. I Discover 3 kitabını getir.', '2026-10-05', 150),
@@ -463,6 +465,17 @@ function migrate(s){
       else s.tasks.push(nt);
     });
     s.version = 9;
+  }
+  if ((s.version || 1) < 10) {
+    /* 2 Ekim eklenen Fen Bilimleri ve İtalyanca ödevleri. */
+    const latest = realTasks();
+    s.tasks = s.tasks || [];
+    latest.forEach(nt => {
+      const old = s.tasks.find(t => t.title === nt.title);
+      if (old) { old.desc = nt.desc; old.dueDate = nt.dueDate; old.subject = nt.subject; }
+      else s.tasks.push(nt);
+    });
+    s.version = 10;
   }
   s.tasks = s.tasks || []; s.exams = s.exams || []; s.schedule = s.schedule || [];
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
