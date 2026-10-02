@@ -28,7 +28,7 @@ jobs:
 
       - name: Bağımlılıklar
         # Argo kütüphanesi belirli bir sürüme sabitlendi (gayriresmi kütüphane).
-        run: pip install --quiet "didupwrapper @ git+https://github.com/Rocciadura/didupAPI-wrapper@e98a9a67f4d1770ecda271e7a981efadd4d26e20" "deep-translator==1.11.4" "requests>=2.31"
+        run: pip install --quiet "didupwrapper @ git+https://github.com/Rocciadura/didupAPI-wrapper@e98a9a67f4d1770ecda271e7a981efadd4d26e20" "requests>=2.31"
 
       - name: Argo ödevlerini çek ve onay kutusuna yaz
         env:

@@ -1531,6 +1531,13 @@ function pendingRedemptions(){ return state.redemptions.filter(r => r.status ===
 function argoItems(){
   return Object.values(state.argoInbox || {}).filter(x => x && x.id).sort((a,b) => String(a.dueDate).localeCompare(String(b.dueDate)));
 }
+/* Ödev metni İtalyanca kalır; başlık: "Ders: metnin başı". */
+function argoTitle(it){
+  const t = String(it.descIt || '').replace(/\s+/g, ' ').trim();
+  const short = t.length > 48 ? t.slice(0, 46).replace(/\s+\S*$/, '') + '…' : t;
+  const body = short.charAt(0).toUpperCase() + short.slice(1);
+  return SUBJECTS[it.subject] ? SUBJECTS[it.subject].name + ': ' + body : body;
+}
 function argoInboxCard(){
   const items = argoItems();
   if (!items.length) return '';
@@ -1540,13 +1547,12 @@ function argoInboxCard(){
       '<span class="text-[18px] font-bold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo\'dan Gelenler</span>' +
       '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[12px] font-extrabold">' + items.length + '</span>' +
     '</div>' +
-    '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Okulun Argo sisteminden otomatik çekildi ve Türkçeye çevrildi. Kontrol et, onayladıkların ' + esc(state.student.nickname) + '\'un ekranına düşer.</p>' +
+    '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Okulun Argo sisteminden otomatik çekildi, ders eşlendi. Kontrol et, onayladıkların ' + esc(state.student.nickname) + '\'un ekranına düşer.</p>' +
     items.map(it =>
       '<div class="rounded-lg bg-surface-container-lowest p-3 flex flex-col gap-2">' +
-        '<input id="ai-title-' + it.id + '" class="inp !py-2 !text-[13px]" value="' + esc(it.titleTr || it.descTr || it.descIt) + '">' +
-        '<textarea id="ai-desc-' + it.id + '" class="inp !py-2 !text-[12px] min-h-[60px] resize-none">' + esc(it.descTr || it.descIt) + '</textarea>' +
-        (it.translated === false ? '<p class="text-[11px] font-extrabold text-secondary">Çeviri yapılamadı — metni Türkçe düzeltebilirsin.</p>' : '') +
-        '<details class="text-[11px] font-semibold text-on-surface-variant"><summary class="cursor-pointer font-extrabold">İtalyanca aslı' + (it.subjectIt ? ' • ' + esc(it.subjectIt) : '') + '</summary><p class="mt-1">' + esc(it.descIt) + '</p></details>' +
+        '<input id="ai-title-' + it.id + '" class="inp !py-2 !text-[13px]" value="' + esc(argoTitle(it)) + '">' +
+        '<textarea id="ai-desc-' + it.id + '" class="inp !py-2 !text-[12px] min-h-[60px] resize-none">' + esc(it.descIt) + '</textarea>' +
+        (it.subjectIt ? '<p class="text-[11px] font-semibold text-on-surface-variant">Argo dersi: ' + esc(it.subjectIt) + '</p>' : '') +
         '<select id="ai-sub-' + it.id + '" class="inp !py-1.5 !text-[12px]">' + opts(it.subject) + '</select>' +
         '<div class="flex gap-1.5">' +
           '<input id="ai-date-' + it.id + '" type="date" class="inp !py-1.5 !text-[12px] flex-1" value="' + esc(it.dueDate) + '">' +
@@ -1566,10 +1572,10 @@ function argoToTask(id){
   const val = (k, d) => { const el = $('#ai-' + k + '-' + id); return el ? el.value : d; };
   const subject = val('sub', it.subject);
   if (!subject) { toast('⚠️ Önce dersi seç'); return null; }
-  const title = String(val('title', it.titleTr || '')).trim();
+  const title = String(val('title', argoTitle(it))).trim();
   const dueDate = val('date', it.dueDate);
   if (!title || !dueDate) { toast('⚠️ Başlık ve tarih gerekli'); return null; }
-  const task = { id: uid(), title, desc: String(val('desc', it.descTr || '')).trim(), subject,
+  const task = { id: uid(), title, desc: String(val('desc', it.descIt || '')).trim(), subject,
     difficulty: it.difficulty === 'boss' ? 'boss' : 'normal',
     xp: Math.max(10, Math.min(5000, parseInt(val('xp', it.xp)) || 100)),
     createdAt: todayStr(), dueDate, dueTime: '08:00', status: 'active', source: 'argo', argoId: id };
@@ -2342,7 +2348,7 @@ function renderAyarlar(){
     '<section class="card flex flex-col gap-3">' +
       '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo Otomatik Ödev</h3>' +
       '<div class="bg-surface-container-lowest rounded-lg p-3 text-[13px] font-bold text-on-surface">Son çalışma: ' + argoStatusHtml() + '</div>' +
-      '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler günde 4 kez otomatik çekilir, Türkçeye çevrilir ve Panelde <b>Argo\'dan Gelenler</b> listesine düşer.</p>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler günde 4 kez otomatik çekilir, dersi eşlenir ve Panelde <b>Argo\'dan Gelenler</b> listesine düşer.</p>' +
       '<details class="bg-surface-container-lowest rounded-lg p-3">' +
         '<summary class="text-[13px] font-extrabold text-primary-container cursor-pointer">⚙️ Kurulum (bir kez, 5 dakika)</summary>' +
         '<ol class="text-[12px] font-semibold text-on-surface-variant list-decimal ml-4 mt-2 space-y-1">' +

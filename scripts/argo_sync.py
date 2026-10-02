@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Argo DidUP Famiglia'daki "compiti assegnati" listesini çekip Türkçeye
-çevirir ve Ödev Avcısı'nın Firebase veritabanına velinin onay kutusuna
-(odevAvci/argoInbox) yazar.
+"""Argo DidUP Famiglia'daki "compiti assegnati" listesini çekip dersi
+uygulamadaki derse eşler ve Ödev Avcısı'nın Firebase veritabanına velinin
+onay kutusuna (odevAvci/argoInbox) yazar. Ödev metni çevrilmez, İtalyanca kalır.
 
 GitHub Actions'ta zamanlanmış olarak çalışır (.github/workflows/argo-sync.yml).
 Depo herkese açık olduğu için Actions kayıtları da herkese açıktır: bu betik
@@ -19,7 +19,6 @@ import hashlib
 import os
 import re
 import sys
-import time
 from datetime import date, datetime, timedelta, timezone
 
 import requests
@@ -82,37 +81,6 @@ def guess_reward(text_it: str) -> tuple[int, str]:
     if re.search(r"\bportare\b|\bporta\b", low) and len(low) < 120:
         return 50, "normal"
     return 100, "normal"
-
-
-# ---------------------------------------------------------------- çeviri ---
-def translate(texts: list[str]) -> list[str | None]:
-    """İtalyanca -> Türkçe (ücretsiz Google çevirisi, olmazsa MyMemory)."""
-    out: list[str | None] = [None] * len(texts)
-    try:
-        from deep_translator import GoogleTranslator
-        gt = GoogleTranslator(source="it", target="tr")
-        for i, t in enumerate(texts):
-            try:
-                out[i] = gt.translate(t) or None
-            except Exception:  # noqa: BLE001 - tek metin başarısız olabilir
-                out[i] = None
-            time.sleep(0.3)
-    except Exception:  # noqa: BLE001
-        pass
-    missing = [i for i, v in enumerate(out) if not v]
-    if missing:
-        try:
-            from deep_translator import MyMemoryTranslator
-            mm = MyMemoryTranslator(source="it-IT", target="tr-TR")
-            for i in missing:
-                try:
-                    out[i] = mm.translate(texts[i][:450]) or None
-                except Exception:  # noqa: BLE001
-                    out[i] = None
-                time.sleep(0.5)
-        except Exception:  # noqa: BLE001
-            pass
-    return out
 
 
 def short_title(subject: str, text: str) -> str:
@@ -230,13 +198,8 @@ def main() -> int:
     entries, new_seen = build_entries(items, known, today, now_iso)
 
     if entries:
-        keys = list(entries)
-        translated = translate([entries[k]["descIt"] for k in keys])
-        for k, tr in zip(keys, translated):
-            e = entries[k]
-            e["translated"] = bool(tr)
-            e["descTr"] = tr or e["descIt"]
-            e["titleTr"] = short_title(e["subject"], e["descTr"])
+        for e in entries.values():
+            e["title"] = short_title(e["subject"], e["descIt"])
         fb.patch("argoInbox", entries)
         fb.patch("argoSeen", new_seen)
 
