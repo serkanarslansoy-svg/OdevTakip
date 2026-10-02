@@ -1435,7 +1435,6 @@ function pendingRedemptions(){ return state.redemptions.filter(r => r.status ===
 function renderPanel(){
   const pt = pendingTasks(), pr = pendingRedemptions();
   const activeCount = state.tasks.filter(t => t.status === 'active').length;
-  const completed = state.tasks.filter(t => t.status === 'completed').sort((a,b) => String(b.completedAt || '').localeCompare(String(a.completedAt || '')));
   const ws = weekStats();
   const approvalCard = (kind, item) => {
     const isTask = kind === 'task';
@@ -1489,13 +1488,6 @@ function renderPanel(){
       (pt.length + pr.length
         ? '<div class="flex flex-col gap-2.5">' + pt.map(t => approvalCard('task', t)).join('') + pr.map(r => approvalCard('reward', r)).join('') + '</div>'
         : '<p class="text-[13px] font-semibold text-on-surface-variant">Bekleyen onay yok. ' + esc(state.student.nickname) + ' görev tamamladığında burada görünecek.</p>') +
-    '</div>' +
-    /* Tamamlanan görevler */
-    '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md">' +
-      '<div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-container text-2xl">task_alt</span><span class="text-[18px] font-bold text-on-surface">Tamamlanan Görevler</span></div><span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[12px] font-extrabold">' + completed.length + '</span></div>' +
-      (completed.length ? '<div class="flex flex-col gap-2.5">' + completed.map(t =>
-        '<div class="card">' + taskCard(t) + '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
-      ).join('') + '</div>' : '<p class="text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</p>') +
     '</div>' +
     /* Hızlı erişim */
     '<div class="grid grid-cols-3 gap-2">' +
