@@ -106,6 +106,41 @@ Sırayla yap: önce iki cihazda giriş, sonra kuralları yayınla.
 
 ---
 
+## 📥 Argo'dan Otomatik Ödev
+
+Okulun Argo DidUP sistemindeki "Compiti assegnati" listesi **günde 4 kez** (İtalya saatiyle
+yaklaşık 07:00, 14:00, 17:00, 20:00) otomatik çekilir, ücretsiz Google çevirisiyle **Türkçeye**
+çevrilir ve **Veli → Panel → Argo'dan Gelenler** listesine düşer. Ruz'un ekranına sen
+onayladıktan sonra geçer. Onaylarken başlığı, açıklamayı, dersi, tarihi ve XP'yi düzeltebilirsin;
+"Gerek Yok" dediğin ödev bir daha gelmez.
+
+**Kurulum (bir kez):**
+1. Önce yukarıdaki **Aile Hesabı** adımlarını tamamla (Firebase'de e-posta/şifre kullanıcısı).
+2. GitHub'da depo → **Settings** → **Secrets and variables** → **Actions** →
+   **New repository secret** ile şu 5 sırrı ekle:
+
+   | Ad | Değer |
+   |---|---|
+   | `ARGO_SCUOLA` | Okul kodu (Argo girişindeki, ör. `SC12345`) |
+   | `ARGO_USERNAME` | Argo veli kullanıcı adı |
+   | `ARGO_PASSWORD` | Argo veli şifresi |
+   | `FB_EMAIL` | Firebase aile hesabı e-postası |
+   | `FB_PASSWORD` | Firebase aile hesabı şifresi |
+
+3. Depoda **Actions** sekmesi → **Argo ödev senkronu** → **Run workflow** ile ilk kez elle çalıştır.
+4. Yeşil tik çıkarsa uygulamada **Ayarlar → Argo Otomatik Ödev → Son çalışma** güncellenir.
+
+**Notlar:**
+- Şifreler GitHub Secrets'ta şifreli durur; kayıtlarda (log) görünmez. Betik kayıtlara ödev
+  metni yazmaz, sadece kaç ödev bulunduğunu yazar.
+- Argo'nun resmi bir API'si yok; gayriresmi [didupAPI-wrapper](https://github.com/Rocciadura/didupAPI-wrapper)
+  kütüphanesi kullanılır. Argo giriş yöntemini değiştirirse çekme durabilir; uygulama
+  çalışmaya devam eder, "Son çalışma" satırında hata görünür.
+- GitHub, depoda 60 gün hiç değişiklik olmazsa zamanlanmış görevleri durdurur. Öyle olursa
+  Actions sekmesinden tekrar etkinleştir.
+
+---
+
 ## 🔔 Sınav Boss Alarmları
 
 - Sınavları veli panelinden tanımlarken **"alarm kaç gün önce?"** ayarını seç (varsayılan 2 gün).

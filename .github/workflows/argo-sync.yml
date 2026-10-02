@@ -1,0 +1,40 @@
+name: Argo ödev senkronu
+
+on:
+  schedule:
+    # UTC saatleri; İtalya saatiyle yaklaşık 07:00, 14:00, 17:00, 20:00 (yaz saati)
+    - cron: '7 5,12,15,18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: argo-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bağımlılıklar
+        # Argo kütüphanesi belirli bir sürüme sabitlendi (gayriresmi kütüphane).
+        run: pip install --quiet "didupwrapper @ git+https://github.com/Rocciadura/didupAPI-wrapper@e98a9a67f4d1770ecda271e7a981efadd4d26e20" "deep-translator==1.11.4" "requests>=2.31"
+
+      - name: Argo ödevlerini çek ve onay kutusuna yaz
+        env:
+          ARGO_SCUOLA: ${{ secrets.ARGO_SCUOLA }}
+          ARGO_USERNAME: ${{ secrets.ARGO_USERNAME }}
+          ARGO_PASSWORD: ${{ secrets.ARGO_PASSWORD }}
+          FB_EMAIL: ${{ secrets.FB_EMAIL }}
+          FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
+        run: python scripts/argo_sync.py
