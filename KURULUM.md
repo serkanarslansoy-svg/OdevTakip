@@ -35,9 +35,9 @@ Sağ üstteki **Ruz / Veli** düğmeleriyle geçiş yapılır.
 - **Ödüller:** Karakter vitrini, rozet koleksiyonu, **Ganimet Mağazası** (XP'yi ödüle takas)
 
 ### 🛡️ Veli ekranları (PIN ile)
-- **Panel:** Onay bekleyen görevler/takaslar, hızlı görev şablonları, son 7 gün grafiği
+- **Panel:** Ruz'un seviyesi, toplam XP, altın bakiyesi ve haftalık kazancı; onay bekleyen görevler/takaslar, hızlı görev şablonları, son 7 gün grafiği
 - **Görev Ata:** Görev oluştur; **Toplu Ödev Ekle** ile öğretmen mesajını/Classroom listesini yapıştırıp tek seferde çok görev ekle (ders, zorluk BOSS/NORMAL, XP, son tarih) → anında Ruz'un ekranına düşer
-- **Planla:** Sınav tanımla (Boss seçimi ve alarm günü ayarlanır), geçmiş sınavın notunu gir/düzenle + haftalık ders programını yönet
+- **Planla:** Sınav tanımla ya da geçmiş tarihli sınavı notuyla birlikte gir (not girişi yalnızca velide) (Boss seçimi ve alarm günü ayarlanır), geçmiş sınavın notunu gir/düzenle + haftalık ders programını yönet
 - **Ödül:** Mağazaya ödül ekle, takas taleplerini onayla/reddet
 - **Ayarlar:** PIN değiştir, bildirim izni, **Firebase senkron**, **Aile Hesabı** girişi, yedek al/geri yükle, sıfırla
 

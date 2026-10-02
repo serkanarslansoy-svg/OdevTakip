@@ -1432,6 +1432,33 @@ function claimLevel10Reward(){
 function pendingTasks(){ return state.tasks.filter(t => t.status === 'pending'); }
 function pendingRedemptions(){ return state.redemptions.filter(r => r.status === 'pending'); }
 
+function statsCard(){
+  const lv = levelOf(state.totalXp);
+  const ws = weekStats();
+  const held = pendingRedemptions().reduce((a, r) => a + (Number(r.cost) || 0), 0);
+  const tile = (icon, color, label, value, sub) =>
+    '<div class="flex flex-col gap-0.5 p-2.5 rounded-lg bg-surface-container-lowest">' +
+      '<span class="text-[11px] font-extrabold text-on-surface-variant uppercase flex items-center gap-1"><span class="material-symbols-outlined text-sm ' + color + '">' + icon + '</span>' + label + '</span>' +
+      '<span class="text-[20px] font-extrabold text-on-surface leading-tight">' + value + '</span>' +
+      '<span class="text-[11px] font-semibold text-on-surface-variant">' + sub + '</span>' +
+    '</div>';
+  return '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md">' +
+    '<div class="flex items-center justify-between gap-2">' +
+      '<span class="text-[18px] font-bold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-primary-container">insights</span>' + esc(state.student.nickname || state.student.name) + ' Durumu</span>' +
+      '<span class="px-2.5 py-1 rounded-full bg-primary-container/15 text-primary-container text-[12px] font-extrabold">LVL ' + lv.level + ' • ' + esc(lv.title) + '</span>' +
+    '</div>' +
+    '<div>' +
+      '<div class="h-2.5 rounded-full bg-surface-container-lowest overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-primary-fixed-dim to-primary-container" style="width:' + lv.pct + '%"></div></div>' +
+      '<p class="text-[11px] font-semibold text-on-surface-variant mt-1">' + (lv.max ? 'En üst seviyeye ulaştı 🏆' : 'Sonraki seviyeye ' + nf(lv.need - lv.into) + ' XP kaldı (' + nf(lv.into) + ' / ' + nf(lv.need) + ')') + '</p>' +
+    '</div>' +
+    '<div class="grid grid-cols-2 gap-2">' +
+      tile('bolt', 'text-primary-container', 'Toplam XP', nf(state.totalXp), 'Seviye ilerlemesi') +
+      tile('paid', 'text-secondary-container', 'Altın', nf(state.gold) + ' 🪙', held ? nf(held) + ' 🪙 onay bekleyen takasta' : 'Harcanabilir bakiye') +
+      tile('date_range', 'text-tertiary-fixed-dim', 'Bu Hafta', '+' + nf(ws.xp) + ' XP', ws.n + ' kazanım (son 7 gün)') +
+      tile('task_alt', 'text-primary-container', 'Tamamlanan', nf(doneCount()), 'onaylanmış görev') +
+    '</div>' +
+  '</div>';
+}
 function renderPanel(){
   const pt = pendingTasks(), pr = pendingRedemptions();
   const activeCount = state.tasks.filter(t => t.status === 'active').length;
@@ -1478,6 +1505,8 @@ function renderPanel(){
         '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">' + tplRow + '</div>' +
       '</div>' +
     '</div>' +
+    /* XP / Altın durumu */
+    statsCard() +
     /* Onaylar */
     '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md">' +
       '<div class="flex items-center justify-between">' +
@@ -1844,7 +1873,9 @@ function renderPlanla(){
     '<span class="material-symbols-outlined text-lg">' + SUBJECTS[s].icon + '</span>' + SUBJECTS[s].name + '</button>'
   ).join('');
   const now = new Date();
-  const exams = state.exams.map(e => ({ ...e, dt: new Date(e.date + 'T' + (e.time || '09:30')) })).sort((a,b) => a.dt - b.dt);
+  const all = state.exams.map(e => ({ ...e, dt: new Date(e.date + 'T' + (e.time || '09:30')) }));
+  /* Yaklaşanlar önce (yakından uzağa), sonra geçmişler (yeniden eskiye). */
+  const exams = all.filter(e => e.dt >= now).sort((a,b) => a.dt - b.dt).concat(all.filter(e => e.dt < now).sort((a,b) => b.dt - a.dt));
   const examRows = exams.length ? exams.map(e => {
     const past = e.dt < now;
     return '<div class="flex items-center gap-2.5 py-2.5 border-b border-surface-container-highest/50 last:border-0">' +
@@ -1877,7 +1908,8 @@ function renderPlanla(){
     '</div>' +
     /* Sınav formu */
     '<section class="card flex flex-col gap-3">' +
-      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">swords</span>Yeni Sınav</h3>' +
+      '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">swords</span>Sınav Ekle</h3>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Gelecek sınavı planlayabilir ya da geçmiş bir sınavı tarihini seçip notuyla birlikte girebilirsin.</p>' +
       '<div><label class="lbl">Ders</label><div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">' + subBtns + '</div></div>' +
       '<div><label class="lbl">Sınav / Boss Adı *</label><input id="ef-title" class="inp" placeholder="Örn: Matematik Yazılı Sınavı"></div>' +
       '<div class="grid grid-cols-2 gap-2">' +
@@ -1885,7 +1917,10 @@ function renderPlanla(){
         '<div><label class="lbl">Saat</label><input id="ef-time" type="time" class="inp" value="09:30"></div>' +
       '</div>' +
       '<div><label class="lbl">Not / Kapsam</label><input id="ef-note" class="inp" placeholder="Konular, getirilecek araçlar..."></div>' +
-      '<div><label class="lbl">Alarm: kaç gün önce?</label><input id="ef-alarm" type="number" min="0" max="14" value="2" class="inp !w-24"></div>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div><label class="lbl">Alarm: kaç gün önce?</label><input id="ef-alarm" type="number" min="0" max="14" value="2" class="inp"></div>' +
+        '<div><label class="lbl">Not (geçmiş sınav)</label><input id="ef-score" type="text" inputmode="decimal" class="inp" placeholder="0–10, ör. 8,5"></div>' +
+      '</div>' +
       '<label class="flex items-center gap-2 text-[13px] font-bold text-on-surface"><input id="ef-boss" type="checkbox" checked class="accent-orange-500 w-5 h-5"> Önemli sınav / Boss (8+ başarı rozeti)</label>' +
       '<button onclick="submitExam()" class="btn-orange"><span class="material-symbols-outlined">local_fire_department</span>Boss Savaşını Planla</button>' +
     '</section>' +
@@ -1912,17 +1947,28 @@ function renderPlanla(){
   '</div>';
 }
 function submitExam(){
+  if (ui.role !== 'parent') return;
   const title = $('#ef-title').value.trim();
   if (!title) { toast('⚠️ Sınav adı gerekli!'); return; }
   const date = $('#ef-date').value; if (!date) { toast('⚠️ Tarih gerekli!'); return; }
   const exam = { id: uid(), title, subject: efSub, date, time: $('#ef-time').value || '09:30', note: $('#ef-note').value.trim(), alarmDays: Math.max(0, Math.min(14, Number($('#ef-alarm').value) || 0)), boss: $('#ef-boss').checked };
+  const past = new Date(exam.date + 'T' + exam.time) <= new Date();
+  const rawScore = ($('#ef-score').value || '').trim();
+  let score = null;
+  if (rawScore) {
+    if (!past) { toast('⚠️ Not yalnızca geçmiş tarihli sınava girilebilir'); return; }
+    score = parseExamScore(rawScore);
+    if (score == null) { toast('0 ile 10 arasında geçerli bir not gir.'); return; }
+  }
   state.exams.push(exam);
-  state.alarmsLast[exam.id] = ''; // alarm yeniden tetiklenebilsin
+  state.alarmsLast[exam.id] = past ? todayStr() : ''; // geçmiş sınav alarm çaldırmasın
+  if (score != null) { applyExamScore(exam, score); return; }
   save(); renderPlanla();
-  toast('🎯 Boss savaşı planlandı! ' + leftLabel(new Date(exam.date + 'T' + exam.time)));
-  beep(false);
+  if (past) toast('📋 Geçmiş sınav eklendi — notunu "Not Gir" ile girebilirsin');
+  else { toast('🎯 Boss savaşı planlandı! ' + leftLabel(new Date(exam.date + 'T' + exam.time))); beep(false); }
 }
 function deleteExam(id){
+  if (ui.role !== 'parent') return;
   askConfirm('Sınavı sil', 'Bu sınav ' + state.student.nickname + '"nin ekranından da kalkacak.', () => {
     const exam = state.exams.find(e => e.id === id);
     if (exam && exam.awardedXp) {
@@ -1942,13 +1988,23 @@ function examBonus(e, score){
   if (e.boss === false) return score >= 10 ? 250 : score >= 9 ? 150 : score >= 8 ? 100 : 50;
   return score >= 10 ? 500 : score >= 9 ? 300 : score >= 8 ? 200 : 100;
 }
+function parseExamScore(raw){
+  const normalized = String(raw).trim().replace(',', '.');
+  const score = Number(normalized);
+  if (!normalized || !Number.isFinite(score) || score < 0 || score > 10 || !/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
+  return score;
+}
 function recordExamScore(id){
+  if (ui.role !== 'parent') return;
   const e = state.exams.find(x => x.id === id); if (!e) return;
   const raw = prompt('"' + e.title + '" notu (0–10, örn. 8,5):', e.score == null ? '' : String(e.score).replace('.', ','));
   if (raw === null) return;
-  const normalized = raw.trim().replace(',', '.');
-  const score = Number(normalized);
-  if (!normalized || !Number.isFinite(score) || score < 0 || score > 10 || !/^\d+(?:\.\d{1,2})?$/.test(normalized)) { toast('0 ile 10 arasında geçerli bir not gir.'); return; }
+  const score = parseExamScore(raw);
+  if (score == null) { toast('0 ile 10 arasında geçerli bir not gir.'); return; }
+  applyExamScore(e, score);
+}
+function applyExamScore(e, score){
+  const examGold = x => x ? goldForXp(x) : 0;
   const previous = e.awardedXp || 0;
   const bonus = examBonus(e, score);
   const earnedAt = e.awardedAt || todayStr();
@@ -1960,10 +2016,10 @@ function recordExamScore(id){
   }
   state.xp = Math.max(0, state.xp + bonus - previous);
   state.totalXp = Math.max(0, state.totalXp + bonus - previous);
-  state.gold = Math.max(0, state.gold + goldForXp(bonus) - goldForXp(previous));
+  state.gold = Math.max(0, state.gold + examGold(bonus) - examGold(previous));
   e.score = score; e.awardedXp = bonus; e.awardedAt = bonus ? earnedAt : null;
   pruneBadges(); checkBadges(); save(); renderAll();
-  toast('📋 Not kaydedildi: ' + nf(score) + '/10 • ' + (bonus >= previous ? '+' : '') + (bonus - previous) + ' XP / ' + (goldForXp(bonus) - goldForXp(previous) >= 0 ? '+' : '') + (goldForXp(bonus) - goldForXp(previous)) + ' 🪙');
+  toast('📋 Not kaydedildi: ' + nf(score) + '/10 • ' + (bonus >= previous ? '+' : '') + (bonus - previous) + ' XP / ' + (examGold(bonus) - examGold(previous) >= 0 ? '+' : '') + (examGold(bonus) - examGold(previous)) + ' 🪙');
 }
 function submitSchedule(){
   const title = $('#sf-title').value.trim();
