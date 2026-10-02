@@ -131,6 +131,12 @@ onayladıktan sonra geçer. Onaylarken başlığı, açıklamayı, dersi, tarihi
 3. Depoda **Actions** sekmesi → **Argo ödev senkronu** → **Run workflow** ile ilk kez elle çalıştır.
 4. Yeşil tik çıkarsa uygulamada **Ayarlar → Argo Otomatik Ödev → Son çalışma** güncellenir.
 
+**Elle senkron:** Uygulamada **Ayarlar → Argo Otomatik Ödev → Şimdi Senkronize Et**. Anahtar
+eklenmemişse düğme GitHub'daki sayfayı açar (orada **Run workflow**). Tek dokunuşla çalışması için
+GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → yalnızca
+**OdevTakip** deposu, izin olarak sadece **Actions: Read and write** verilmiş bir anahtar oluşturup aynı
+ekrana yapıştır. Anahtar yalnızca o cihazda saklanır, buluta gitmez.
+
 **Notlar:**
 - Şifreler GitHub Secrets'ta şifreli durur; kayıtlarda (log) görünmez. Betik kayıtlara ödev
   metni yazmaz, sadece kaç ödev bulunduğunu yazar.

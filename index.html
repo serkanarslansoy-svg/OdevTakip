@@ -636,6 +636,7 @@ function fbOnValue(snap){
   if (hasPending) applyPaths(state, pending);
   localStorage.setItem(LS_KEY, JSON.stringify(state));
   renderAll();
+  argoSyncCheck();
   FB.applyingRemote = false;
   if (hasPending) { fbPush(); toast('☁️ Çevrimdışı değişiklikler buluta eklendi'); }
 }
@@ -1605,6 +1606,58 @@ function rejectArgo(id){
   delete state.argoInbox[id];
   save(); renderAll(); toast('Argo ödevi listeden kaldırıldı');
 }
+/* ---- Argo senkronunu elle başlatma (GitHub Actions workflow_dispatch) ---- */
+const GH_REPO = 'serkanarslansoy-svg/OdevTakip';
+const GH_WORKFLOW = 'argo-sync.yml';
+const LS_GH_TOKEN = 'odevAvciGhTokenV1'; // yalnızca bu cihazda; state'e/buluta yazılmaz
+let argoSyncWaiting = false, argoSyncTimer = null, argoSyncFrom = null;
+function argoToken(){ try { return localStorage.getItem(LS_GH_TOKEN) || ''; } catch(e) { return ''; } }
+function saveArgoToken(){
+  const v = ($('#st-gh-token').value || '').trim();
+  if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)) { toast('⚠️ Geçerli bir GitHub anahtarı yapıştır (github_pat_…)'); return; }
+  try { localStorage.setItem(LS_GH_TOKEN, v); } catch(e) {}
+  toast('🔑 Anahtar bu cihaza kaydedildi'); renderAyarlar();
+}
+function clearArgoToken(){
+  try { localStorage.removeItem(LS_GH_TOKEN); } catch(e) {}
+  toast('Anahtar silindi'); renderAyarlar();
+}
+function argoSyncNow(){
+  if (ui.role !== 'parent' || argoSyncWaiting) return;
+  const token = argoToken();
+  const page = 'https://github.com/' + GH_REPO + '/actions/workflows/' + GH_WORKFLOW;
+  if (!token) { window.open(page, '_blank'); return; }
+  argoSyncWaiting = true; argoSyncFrom = (state.argoLastSync && state.argoLastSync.at) || '';
+  renderAyarlar();
+  fetch('https://api.github.com/repos/' + GH_REPO + '/actions/workflows/' + GH_WORKFLOW + '/dispatches', {
+    method: 'POST',
+    headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + token, 'X-GitHub-Api-Version': '2022-11-28' },
+    body: JSON.stringify({ ref: 'main' })
+  }).then(r => {
+    if (r.status === 204) {
+      toast('🔄 Senkron başlatıldı — 1-2 dakika içinde ödevler Panele düşer');
+      clearTimeout(argoSyncTimer);
+      argoSyncTimer = setTimeout(() => { if (argoSyncWaiting) { argoSyncWaiting = false; toast('Senkron uzun sürdü — Son çalışma satırını kontrol et'); if (ui.view === 'ayarlar') renderAyarlar(); } }, 5 * 60 * 1000);
+    } else {
+      argoSyncWaiting = false;
+      toast(r.status === 401 || r.status === 403 ? '🔒 GitHub anahtarı geçersiz ya da yetkisi yok (Actions: Read and write)' : 'Senkron başlatılamadı (HTTP ' + r.status + ')');
+      if (ui.view === 'ayarlar') renderAyarlar();
+    }
+  }).catch(() => {
+    argoSyncWaiting = false;
+    toast('Senkron başlatılamadı — internet bağlantısı var mı?');
+    if (ui.view === 'ayarlar') renderAyarlar();
+  });
+}
+/* Bulut verisinde argoLastSync değişince bekleyen elle senkronu bitir ve sonucu göster. */
+function argoSyncCheck(){
+  if (!argoSyncWaiting) return;
+  const ls = state.argoLastSync;
+  if (!ls || !ls.at || ls.at === argoSyncFrom) return;
+  argoSyncWaiting = false; clearTimeout(argoSyncTimer);
+  toast(ls.ok ? '✅ Argo senkronu bitti • ' + (Number(ls.added) || 0) + ' yeni ödev' : '❌ Argo senkronu hata verdi: ' + (ls.error || 'bilinmiyor'));
+  if (ui.view === 'ayarlar') renderAyarlar();
+}
 function argoStatusHtml(){
   const ls = state.argoLastSync;
   if (!ls || !ls.at) return '<span class="text-on-surface-variant">Henüz hiç çalışmadı</span>';
@@ -2349,6 +2402,22 @@ function renderAyarlar(){
       '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo Otomatik Ödev</h3>' +
       '<div class="bg-surface-container-lowest rounded-lg p-3 text-[13px] font-bold text-on-surface">Son çalışma: ' + argoStatusHtml() + '</div>' +
       '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler günde 4 kez otomatik çekilir, dersi eşlenir ve Panelde <b>Argo\'dan Gelenler</b> listesine düşer.</p>' +
+      '<button id="argo-sync-btn" onclick="argoSyncNow()" class="btn-green"' + (argoSyncWaiting ? ' disabled' : '') + '><span class="material-symbols-outlined">' + (argoSyncWaiting ? 'hourglass_top' : 'sync') + '</span>' + (argoSyncWaiting ? 'Çekiliyor… (1-2 dk)' : 'Şimdi Senkronize Et') + '</button>' +
+      (argoToken() ? '' : '<p class="text-[11px] font-semibold text-on-surface-variant -mt-1">Düğme şu an GitHub sayfasını açar; orada <b>Run workflow</b>\'a bas. Tek dokunuşla çalışması için aşağıdan GitHub anahtarı ekle.</p>') +
+      '<details class="bg-surface-container-lowest rounded-lg p-3">' +
+        '<summary class="text-[13px] font-extrabold text-primary-container cursor-pointer">🔑 Tek dokunuşla senkron (GitHub anahtarı) ' + (argoToken() ? '<span class="text-primary-container">• EKLİ ✓</span>' : '') + '</summary>' +
+        '<ol class="text-[12px] font-semibold text-on-surface-variant list-decimal ml-4 mt-2 space-y-1">' +
+          '<li>GitHub → sağ üstte profil resmi → <b>Settings</b> → en altta <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li>' +
+          '<li><b>Repository access</b>: <b>Only select repositories</b> → <b>OdevTakip</b>.</li>' +
+          '<li><b>Permissions</b> → <b>Actions</b>: <b>Read and write</b> (başka izin verme) → <b>Generate token</b>.</li>' +
+          '<li>Çıkan anahtarı (github_pat_… ile başlar) aşağıya yapıştır → <b>Kaydet</b>.</li>' +
+        '</ol>' +
+        '<p class="text-[11px] font-semibold text-secondary mt-2">Anahtar yalnızca bu cihazda saklanır; buluta ve Ruz\'un cihazına gitmez.</p>' +
+        '<div class="flex gap-2 mt-2"><input id="st-gh-token" type="password" autocomplete="off" class="inp !py-2 !text-[12px] flex-1" placeholder="' + (argoToken() ? 'Kayıtlı anahtar var' : 'github_pat_…') + '">' +
+          '<button onclick="saveArgoToken()" class="px-3 rounded-full bg-primary-container text-on-primary-container text-[12px] font-extrabold">Kaydet</button>' +
+          (argoToken() ? '<button onclick="clearArgoToken()" class="px-3 rounded-full bg-error-container/30 text-error text-[12px] font-extrabold">Sil</button>' : '') +
+        '</div>' +
+      '</details>' +
       '<details class="bg-surface-container-lowest rounded-lg p-3">' +
         '<summary class="text-[13px] font-extrabold text-primary-container cursor-pointer">⚙️ Kurulum (bir kez, 5 dakika)</summary>' +
         '<ol class="text-[12px] font-semibold text-on-surface-variant list-decimal ml-4 mt-2 space-y-1">' +
