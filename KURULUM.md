@@ -30,7 +30,7 @@ Sağ üstteki **Ruz / Veli** düğmeleriyle geçiş yapılır.
 ### 🚀 Öğrenci ekranları
 - **Görevler:** Ana ekran — XP/seviye göstergesi, gün serisi 🔥, acil sınav alarmı, bugünün görevleri
 - **Dersler:** Tüm görevler; ders filtreleri, arama, devam eden / tamamlanan sekmeleri
-- **Program:** Haftalık okul + kurs çizelgesi, "ŞU AN" canlı göstergesi
+- **Program:** Haftalık takvim görünümü (derse dokununca saat, yer, o gün teslim edilecek ödevler ve sınavlar açılır) veya günlük liste, "ŞU AN" canlı göstergesi
 - **Sınavlar:** Boss savaşı geri sayımları, yaklaşan / geçmiş sınavlar, girilmiş sınav notları, bildirim izni
 - **Ödüller:** Karakter vitrini, rozet koleksiyonu, **Ganimet Mağazası** (XP'yi ödüle takas)
 

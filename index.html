@@ -1190,7 +1190,94 @@ function renderCalendar(){
 }
 
 /* ---- Program ---- */
-let progDay = wIdx(new Date()), progFilter = 'all';
+let progDay = wIdx(new Date()), progFilter = 'all', progMode = 'grid', gridWeek = 0;
+/* ---- Haftalık takvim ızgarası (öğrenci Program + veli Planla) ---- */
+const SUBJECT_COLORS = { mat:'#00ff88', ita:'#7bd0ff', sci:'#b388ff', sto:'#ffb693', geo:'#4dd0a8', ing:'#ff8a80',
+  fra:'#80b3ff', art:'#ff7ad9', mus:'#ffd54f', tec:'#9ccc65', rel:'#bcaaa4', gym:'#ffab40' };
+const SUBJECT_SHORT = { mat:'Mat', ita:'İtalyanca', sci:'Fen', sto:'Tarih', geo:'Coğrafya', ing:'İngilizce',
+  fra:'Fransızca', art:'Sanat', mus:'Müzik', tec:'Teknoloji', rel:'Din', gym:'Beden' };
+function schedSubject(it){
+  const t = String(it.title || '').toLocaleLowerCase('tr-TR');
+  return Object.keys(SUBJECTS).find(k => t.startsWith(SUBJECTS[k].name.toLocaleLowerCase('tr-TR')) || t.includes(SUBJECTS[k].it.toLocaleLowerCase('tr-TR'))) || null;
+}
+function gridMonday(){ const m = addDays(-wIdx(new Date()) + gridWeek * 7); m.setHours(0,0,0,0); return m; }
+function weekGrid(filter){
+  const items = state.schedule.filter(s => filter === 'all' || s.type === filter);
+  const monday = gridMonday();
+  const showWeekend = items.some(s => s.day >= 5);
+  const nDays = showWeekend ? 7 : 5;
+  const dates = Array.from({ length: nDays }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+  const starts = [...new Set(items.filter(s => s.day < nDays).map(s => s.start))].sort();
+  const today = todayStr();
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const toMin = h => (+h.split(':')[0]) * 60 + (+h.split(':')[1]);
+  const cols = '38px repeat(' + nDays + ', minmax(0, 1fr))';
+  const head = '<div></div>' + dates.map((d, i) => {
+    const isToday = ymd(d) === today;
+    return '<div class="text-center py-1 rounded-md ' + (isToday ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">' +
+      '<div class="text-[10px] font-extrabold leading-none">' + WEEK_ABBR[i] + '</div><div class="text-[12px] font-extrabold leading-tight">' + d.getDate() + '</div></div>';
+  }).join('');
+  const body = starts.map(st => '<div class="text-[10px] font-extrabold text-on-surface-variant text-right pr-1 pt-1.5 leading-none">' + st + '</div>' +
+    dates.map((d, i) => {
+      const it = items.find(s => s.day === i && s.start === st);
+      if (!it) return '<div class="rounded-md bg-surface-container-lowest/40 min-h-[44px]"></div>';
+      const sub = schedSubject(it);
+      const col = it.type === 'school' ? (SUBJECT_COLORS[sub] || '#7bd0ff') : '#fe6b00';
+      const ds = ymd(d);
+      const hw = sub ? state.tasks.filter(t => t.subject === sub && t.dueDate === ds && t.status !== 'completed').length : 0;
+      const ex = sub ? state.exams.some(e => e.subject === sub && e.date === ds) : false;
+      const isNow = ds === today && nowMin >= toMin(it.start) && nowMin < toMin(it.end);
+      const label = sub ? SUBJECT_SHORT[sub] : it.title;
+      return '<button onclick="openSchedDetail(\'' + it.id + '\',\'' + ds + '\')" class="relative rounded-md min-h-[44px] px-1 py-1 text-left overflow-hidden active:scale-95 transition-transform ' + (isNow ? 'ring-2 ring-primary-container' : '') + '" style="background:' + col + '26;border-left:3px solid ' + col + '">' +
+        (sub ? '<span class="material-symbols-outlined text-[14px] leading-none" style="color:' + col + '">' + SUBJECTS[sub].icon + '</span>' : '') +
+        '<span class="block text-[10px] font-extrabold text-on-surface leading-tight truncate">' + esc(label) + '</span>' + (sub ? '' : '<span class="block text-[9px] font-semibold text-on-surface-variant leading-tight">' + esc(it.start) + '–' + esc(it.end) + '</span>') +
+        (hw || ex ? '<span class="absolute top-0.5 right-0.5 flex gap-0.5">' + (ex ? '<span class="w-2 h-2 rounded-full bg-secondary-container shadow-[0_0_6px_#fe6b00]"></span>' : '') + (hw ? '<span class="w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_#00ff88]"></span>' : '') + '</span>' : '') +
+      '</button>';
+    }).join('')
+  ).join('');
+  const wkLabel = gridWeek === 0 ? 'Bu Hafta' : gridWeek === 1 ? 'Gelecek Hafta' : gridWeek === -1 ? 'Geçen Hafta' : fmtDateTR(ymd(monday)).split(' ').slice(0, 2).join(' ') + ' haftası';
+  return '<div class="flex flex-col gap-2">' +
+    '<div class="flex items-center justify-between">' +
+      '<button onclick="gridWeek--;renderAll()" class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-lg">chevron_left</span></button>' +
+      '<button onclick="gridWeek=0;renderAll()" class="text-[13px] font-extrabold text-primary">' + wkLabel + '</button>' +
+      '<button onclick="gridWeek++;renderAll()" class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-lg">chevron_right</span></button>' +
+    '</div>' +
+    (starts.length
+      ? '<div class="grid gap-1" style="grid-template-columns:' + cols + '">' + head + body + '</div>'
+      : '<p class="text-[13px] font-semibold text-on-surface-variant text-center py-4">Programda ders yok.</p>') +
+    '<p class="text-[10px] font-semibold text-on-surface-variant flex items-center gap-3 justify-center"><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary-container"></span>Ödev teslimi</span><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary-container"></span>Sınav</span><span>Detay için derse dokun</span></p>' +
+  '</div>';
+}
+function openSchedDetail(id, ds){
+  const it = state.schedule.find(s => s.id === id); if (!it) return;
+  const sub = schedSubject(it);
+  const d = new Date(ds + 'T00:00:00');
+  const hw = sub ? state.tasks.filter(t => t.subject === sub && t.dueDate === ds) : [];
+  const ex = sub ? state.exams.filter(e => e.subject === sub && e.date === ds) : [];
+  const upcoming = sub ? state.tasks.filter(t => t.subject === sub && t.status !== 'completed' && t.dueDate > ds).sort((a,b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 3) : [];
+  const col = it.type === 'school' ? (SUBJECT_COLORS[sub] || '#7bd0ff') : '#fe6b00';
+  const taskLine = t => '<button onclick="closeDetail();openTaskDetail(\'' + t.id + '\')" class="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-surface-container-lowest">' +
+    '<span class="material-symbols-outlined text-base ' + (t.status === 'completed' ? 'text-primary-container' : t.status === 'pending' ? 'text-tertiary-fixed-dim' : 'text-on-surface-variant') + '">' + (t.status === 'completed' ? 'check_circle' : t.status === 'pending' ? 'hourglass_top' : 'radio_button_unchecked') + '</span>' +
+    '<span class="flex-1 min-w-0"><span class="block text-[13px] font-bold text-on-surface truncate">' + esc(t.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(fmtDue(t)) + '</span></span></button>';
+  openDetail(
+    '<div class="flex flex-col gap-3">' +
+      '<div class="flex items-start gap-3">' +
+        '<div class="w-12 h-12 rounded-lg flex items-center justify-center shrink-0" style="background:' + col + '26;color:' + col + '"><span class="material-symbols-outlined text-2xl">' + (sub ? SUBJECTS[sub].icon : (it.type === 'school' ? 'school' : 'sports_soccer')) + '</span></div>' +
+        '<div class="min-w-0 flex-1"><p class="text-[17px] font-extrabold text-primary leading-tight">' + esc(it.title) + '</p>' +
+        '<p class="text-[12px] font-semibold text-on-surface-variant mt-0.5">' + WEEK_TR[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS_TR[d.getMonth()] + ' • ' + esc(it.start) + '–' + esc(it.end) + '</p>' +
+        '<p class="text-[12px] font-semibold text-on-surface-variant">' + (it.type === 'school' ? 'Okul dersi' : 'Kurs & Etüt') + (it.place ? ' • ' + esc(it.place) : '') + '</p></div>' +
+      '</div>' +
+      (ex.length ? ex.map(e => '<div class="p-2.5 rounded-lg bg-secondary-container/15 text-[13px] font-bold text-secondary flex items-center gap-2"><span class="material-symbols-outlined text-base">local_fire_department</span><span class="flex-1">' + esc(e.title) + ' • ' + esc(e.time || '09:30') + (e.score != null ? ' • Not: ' + nf(e.score) : '') + (e.note ? '<span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(e.note) + '</span>' : '') + '</span></div>').join('') : '') +
+      '<div><p class="lbl">Bu derse teslim edilecek ödevler</p>' +
+        (hw.length ? '<div class="flex flex-col gap-1.5">' + hw.map(taskLine).join('') + '</div>' : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için ödev yok.</p>') +
+      '</div>' +
+      (upcoming.length ? '<div><p class="lbl">Sıradaki ' + esc(SUBJECTS[sub].name) + ' ödevleri</p><div class="flex flex-col gap-1.5">' + upcoming.map(taskLine).join('') + '</div></div>' : '') +
+      (ui.role === 'parent' ? '<button onclick="deleteSchedule(\'' + it.id + '\')" class="w-full py-2 rounded-full bg-error-container/20 text-error text-[12px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-base">delete</span>Programdan Sil</button>' : '') +
+      '<button onclick="closeDetail()" class="btn-ghost">Kapat</button>' +
+    '</div>'
+  );
+  trUpper($('#detail-box'));
+}
 function renderProgram(){
   const monday = addDays(-wIdx(new Date()));
   const days = [];
@@ -1255,8 +1342,15 @@ function renderProgram(){
         '<button onclick="progFilter=\'' + f[0] + '\';renderProgram()" class="py-2 rounded-full text-[12px] font-extrabold transition-all ' + (progFilter === f[0] ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">' + f[1] + '</button>'
       ).join('') +
     '</div>' +
-    '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-gutter px-gutter py-1">' + chips + '</div>' +
-    '<div class="flex flex-col">' + rows + '</div>' +
+    '<div class="grid grid-cols-2 gap-1.5 p-1 bg-surface-container-lowest rounded-full">' +
+      [['grid','calendar_view_week','HAFTALIK TAKVİM'],['list','view_agenda','GÜNLÜK LİSTE']].map(m =>
+        '<button onclick="progMode=\'' + m[0] + '\';renderProgram()" class="py-2 rounded-full text-[12px] font-extrabold flex items-center justify-center gap-1 ' + (progMode === m[0] ? 'bg-tertiary-container text-on-tertiary-container' : 'text-on-surface-variant') + '"><span class="material-symbols-outlined text-base">' + m[1] + '</span>' + m[2] + '</button>'
+      ).join('') +
+    '</div>' +
+    (progMode === 'grid'
+      ? '<div class="card !p-2.5">' + weekGrid(progFilter) + '</div>'
+      : '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-gutter px-gutter py-1">' + chips + '</div>' +
+        '<div class="flex flex-col">' + rows + '</div>') +
   '</div>';
 }
 
@@ -1888,14 +1982,6 @@ function renderPlanla(){
   }).join('') : '<p class="text-[13px] font-semibold text-on-surface-variant py-2">Planlanmış sınav yok.</p>';
 
   const dayNames = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
-  const schedRows = state.schedule.slice().sort((a,b) => a.day - b.day || a.start.localeCompare(b.start)).map(s =>
-    '<div class="flex items-center gap-2.5 py-2 border-b border-surface-container-highest/50 last:border-0">' +
-      '<span class="px-2 py-1 rounded-md bg-surface-container-high text-[11px] font-extrabold text-tertiary-fixed shrink-0 w-[86px] text-center">' + dayNames[s.day] + '</span>' +
-      '<div class="flex-1 min-w-0"><p class="text-[13px] font-bold text-on-surface truncate">' + esc(s.title) + '</p>' +
-      '<p class="text-[11px] font-semibold text-on-surface-variant truncate">' + s.start + '-' + s.end + (s.place ? ' • ' + esc(s.place) : '') + '</p></div>' +
-      '<button onclick="deleteSchedule(\'' + s.id + '\')" class="p-2 rounded-full bg-error-container/15 text-error shrink-0"><span class="material-symbols-outlined text-base">delete</span></button>' +
-    '</div>'
-  ).join('');
 
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-lg pb-6">' +
     '<div class="relative overflow-hidden rounded-xl bg-surface-container-high p-space-md shadow-xl">' +
@@ -1942,7 +2028,7 @@ function renderPlanla(){
       '</div>' +
       '<button onclick="submitSchedule()" class="btn-ghost"><span class="material-symbols-outlined">add</span>Programa Ekle</button>' +
       '<button onclick="resetSchedule()" class="w-full py-2 rounded-full bg-tertiary-container/15 text-tertiary-fixed-dim text-[12px] font-extrabold flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-base">restart_alt</span>Okul Programını Orijinal Haline Sıfırla</button>' +
-      '<div class="mt-1">' + schedRows + '</div>' +
+      '<div class="mt-1">' + weekGrid('all') + '</div>' +
     '</section>' +
   '</div>';
 }
@@ -2028,8 +2114,9 @@ function submitSchedule(){
   save(); renderPlanla(); toast('📅 Program güncellendi');
 }
 function deleteSchedule(id){
+  if (ui.role !== 'parent') return;
   state.schedule = state.schedule.filter(s => s.id !== id);
-  save(); renderPlanla(); toast('Program öğesi silindi');
+  closeDetail(); save(); renderAll(); toast('Program öğesi silindi');
 }
 function resetSchedule(){
   askConfirm('Okul programını geri yükle', 'Okul ders programı orijinal haline sıfırlanır (kurs/etüt girdilerin silinmez).', () => {
