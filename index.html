@@ -1006,7 +1006,8 @@ function renderDersler(){
   let list = state.tasks.filter(t => (derSubject === 'all' || t.subject === derSubject) && (!q || (t.title + ' ' + t.desc).toLowerCase().includes(q)));
   const active = list.filter(t => t.status === 'active' || t.status === 'pending').sort((a,b) => taskDue(a) - taskDue(b));
   const done = list.filter(t => t.status === 'completed').sort((a,b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
-  const showList = derTab === 'active' ? active : done;
+  const allTasks = active.concat(done);
+  const showList = derTab === 'active' ? active : derTab === 'done' ? done : allTasks;
   const activeCount = state.tasks.filter(t => t.status === 'active' || t.status === 'pending').length;
   const doneCountAll = state.tasks.filter(t => t.status === 'completed').length;
 
@@ -1016,15 +1017,17 @@ function renderDersler(){
       '<input id="der-search" class="inp pl-11" placeholder="Görev veya ders ara..." value="' + esc(derSearch) + '" oninput="derSearch=this.value;renderDersler();document.getElementById(\'der-search\').focus()">' +
     '</div>' +
     '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-gutter px-gutter">' + chips + '</div>' +
-    '<div class="grid grid-cols-2 p-1 bg-surface-container-lowest rounded-full shadow-[inset_0_2px_5px_rgba(0,0,0,0.6)]">' +
+    '<div class="grid grid-cols-3 p-1 bg-surface-container-lowest rounded-full shadow-[inset_0_2px_5px_rgba(0,0,0,0.6)]">' +
       '<button onclick="derTab=\'active\';renderDersler()" class="flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-extrabold transition-all ' + (derTab === 'active' ? 'bg-surface-container text-secondary shadow-[0_3px_0_#070a11]' : 'text-on-surface-variant') + '">' +
         '<span class="material-symbols-outlined text-base ' + (derTab === 'active' ? 'text-secondary-container' : '') + '">local_fire_department</span>DEVAM EDENLER (' + activeCount + ')</button>' +
       '<button onclick="derTab=\'done\';renderDersler()" class="flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-extrabold transition-all ' + (derTab === 'done' ? 'bg-surface-container text-primary-container shadow-[0_3px_0_#070a11]' : 'text-on-surface-variant') + '">' +
         '<span class="material-symbols-outlined text-base">verified</span>TAMAMLANANLAR (' + doneCountAll + ')</button>' +
+      '<button onclick="derTab=\'all\';renderDersler()" class="flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-extrabold transition-all ' + (derTab === 'all' ? 'bg-surface-container text-secondary-container shadow-[0_3px_0_#070a11]' : 'text-on-surface-variant') + '">' +
+        '<span class="material-symbols-outlined text-base">view_list</span>TÜMÜ (' + (activeCount + doneCountAll) + ')</button>' +
     '</div>' +
     '<div class="flex flex-col gap-2.5">' +
       (showList.length ? showList.map(t => taskCard(t)).join('')
-        : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : 'Tamamlanan görev yok') + '</p></div>') +
+        : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : derTab === 'done' ? 'Tamamlanan görev yok' : 'Görev bulunamadı') + '</p></div>') +
     '</div>' +
   '</div>';
   const inp = $('#der-search');
@@ -1408,6 +1411,7 @@ function renderGorev(){
   const completed = state.tasks.filter(t => t.status === 'completed' && bySubject(t)).sort((a,b) => String(b.completedAt || '').localeCompare(String(a.completedAt || '')));
   const activeCount = state.tasks.filter(t => (t.status === 'active' || t.status === 'pending') && bySubject(t)).length;
   const completedCount = state.tasks.filter(t => t.status === 'completed' && bySubject(t)).length;
+  const allCount = activeCount + completedCount;
   const t0 = todayStr();
   const subBtns = Object.keys(SUBJECTS).map(s =>
     '<button onclick="tfSub=\'' + s + '\';renderGorev()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
@@ -1415,7 +1419,8 @@ function renderGorev(){
     '<span class="material-symbols-outlined text-lg">' + SUBJECTS[s].icon + '</span>' + SUBJECTS[s].name + '</button>'
   ).join('');
   const filterSubjects = '<button onclick="gfSub=\'all\';renderGorev()" class="shrink-0 px-3 py-2 rounded-full text-[12px] font-extrabold ' + (gfSub === 'all' ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">TÜM DERSLER</button>' + Object.keys(SUBJECTS).map(s => '<button onclick="gfSub=\'' + s + '\';renderGorev()" class="shrink-0 px-3 py-2 rounded-full text-[12px] font-extrabold ' + (gfSub === s ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">' + SUBJECTS[s].name + '</button>').join('');
-  const taskFilters = '<div class="card !p-3 flex flex-col gap-2"><div class="grid grid-cols-2 gap-1.5 p-1 bg-surface-container-lowest rounded-full"><button onclick="gfStatus=\'active\';renderGorev()" class="py-2 rounded-full text-[12px] font-extrabold ' + (gfStatus === 'active' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">DEVAM EDENLER (' + activeCount + ')</button><button onclick="gfStatus=\'done\';renderGorev()" class="py-2 rounded-full text-[12px] font-extrabold ' + (gfStatus === 'done' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">TAMAMLANANLAR (' + completedCount + ')</button></div><div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">' + filterSubjects + '</div></div>';
+  const taskFilters = '<div class="card !p-3 flex flex-col gap-2"><div class="grid grid-cols-3 gap-1.5 p-1 bg-surface-container-lowest rounded-full"><button onclick="gfStatus=\'active\';renderGorev()" class="py-2 rounded-full text-[12px] font-extrabold ' + (gfStatus === 'active' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">DEVAM EDENLER (' + activeCount + ')</button><button onclick="gfStatus=\'done\';renderGorev()" class="py-2 rounded-full text-[12px] font-extrabold ' + (gfStatus === 'done' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">TAMAMLANANLAR (' + completedCount + ')</button><button onclick="gfStatus=\'all\';renderGorev()" class="py-2 rounded-full text-[12px] font-extrabold ' + (gfStatus === 'all' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant') + '">TÜMÜ (' + allCount + ')</button></div><div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">' + filterSubjects + '</div></div>';
+  const allTasks = active.concat(completed);
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="card flex flex-col gap-3">' +
       '<h2 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">add_task</span>Yeni Görev (Quest) Oluştur</h2>' +
@@ -1437,7 +1442,7 @@ function renderGorev(){
       '<button onclick="submitTask()" class="btn-orange"><span class="material-symbols-outlined">rocket_launch</span>Görevi Yayınla — ' + esc(state.student.nickname) + '\'nin Ekranına Düşsün!</button>' +
     '</div>' +
     taskFilters +
-    (gfStatus === 'active' ? '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">format_list_bulleted</span>Devam Eden Görevler (' + active.length + ')</h3>' : '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">task_alt</span>Tamamlanan Görevler (' + completed.length + ')</h3>') +
+    (gfStatus === 'active' ? '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">format_list_bulleted</span>Devam Eden Görevler (' + active.length + ')</h3>' : gfStatus === 'done' ? '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">task_alt</span>Tamamlanan Görevler (' + completed.length + ')</h3>' : '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">view_list</span>Tüm Ödevler (' + allTasks.length + ')</h3>') +
     '<div class="flex flex-col gap-2.5">' +
       (gfStatus === 'active' ?
       (active.length ? active.map(t =>
@@ -1445,11 +1450,12 @@ function renderGorev(){
         '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
         '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
       ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') :
-      (completed.length ? completed.map(t =>
+      gfStatus === 'done' ? (completed.length ? completed.map(t =>
         '<div class="card">' + taskCard(t) +
         '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
         '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
-      ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>')) +
+      ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') :
+      (allTasks.length ? allTasks.map(t => '<div class="card">' + taskCard(t) + '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button></div>').join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz ödev yok.</div>')) +
     '</div>' +
   '</div>';
 }
