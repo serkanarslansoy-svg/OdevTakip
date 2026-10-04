@@ -544,6 +544,7 @@ function migrate(s){
   s.rewards = s.rewards || []; s.redemptions = s.redemptions || []; s.history = s.history || [];
   s.badges = s.badges || {}; s.alarmsLast = s.alarmsLast || {};
   s.argoInbox = s.argoInbox || {}; s.argoSeen = s.argoSeen || {};
+  s.vocabLog = s.vocabLog || {};
   s.totalXp = Math.max(0, Number(s.totalXp) || Number(s.xp) || 0);
   s.gold = Math.max(0, Number(s.gold) || 0);
   s.level10RewardClaimed = !!s.level10RewardClaimed;
@@ -1124,6 +1125,8 @@ function renderHome(){
       '</div>' +
     '</div>' +
     bossAlarmCard() +
+    /* Günlük Kelime Avı */
+    vocabCard() +
     /* Bugünün Görevleri */
     '<div class="flex items-center justify-between pt-1">' +
       '<div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-container text-xl">sports_score</span>' +
@@ -1553,6 +1556,107 @@ function claimLevel10Reward(){
 function pendingTasks(){ return state.tasks.filter(t => t.status === 'pending'); }
 function pendingRedemptions(){ return state.redemptions.filter(r => r.status === 'pending'); }
 
+/* ---- Günlük Kelime Avı: her gün 10 İngilizce kelime (A2/B1), günde bir kez ---- */
+const VOCAB = 'achieve=başarmak|advice=tavsiye|afraid=korkmuş|agree=aynı fikirde olmak|allow=izin vermek|almost=neredeyse|alone=yalnız|already=zaten|although=rağmen|angry=kızgın|announce=duyurmak|appear=ortaya çıkmak|arrive=varmak|attack=saldırmak|avoid=kaçınmak|awake=uyanık|borrow=ödünç almak|brave=cesur|break=kırmak|bridge=köprü|bright=parlak|build=inşa etmek|busy=meşgul|careful=dikkatli|carry=taşımak|celebrate=kutlamak|century=yüzyıl|change=değiştirmek|cheap=ucuz|choose=seçmek|clean=temiz|climb=tırmanmak|coast=kıyı|collect=toplamak|comfortable=rahat|compare=karşılaştırmak|complain=şikâyet etmek|condition=durum|continue=devam etmek|correct=doğru|crowded=kalabalık|dangerous=tehlikeli|dark=karanlık|decide=karar vermek|deep=derin|describe=tarif etmek|destroy=yok etmek|develop=geliştirmek|difficult=zor|dirty=kirli|disappear=kaybolmak|discover=keşfetmek|dream=rüya|early=erken|earn=para kazanmak|easy=kolay|empty=boş|enemy=düşman|enjoy=keyif almak|enough=yeterli|environment=çevre|escape=kaçmak|event=olay|expensive=pahalı|explain=açıklamak|fail=başarısız olmak|famous=ünlü|fast=hızlı|fear=korku|field=tarla|fight=kavga etmek|fill=doldurmak|finish=bitirmek|follow=takip etmek|forest=orman|forget=unutmak|forgive=affetmek|free=ücretsiz|friendly=arkadaş canlısı|future=gelecek|gift=hediye|goal=hedef|guess=tahmin etmek|happen=meydana gelmek|healthy=sağlıklı|heavy=ağır|help=yardım etmek|hide=saklanmak|hope=umut etmek|huge=kocaman|hungry=aç|hurry=acele etmek|idea=fikir|important=önemli|improve=iyileştirmek|include=içermek|invite=davet etmek|island=ada|journey=yolculuk|knowledge=bilgi|language=dil|late=geç|laugh=gülmek|lazy=tembel|lend=ödünç vermek|library=kütüphane|lie=yalan söylemek|lose=kaybetmek|loud=yüksek sesli|lucky=şanslı|market=pazar|meal=öğün|medicine=ilaç|mirror=ayna|mistake=hata|neighbour=komşu|noise=gürültü|notice=fark etmek|offer=teklif etmek|opinion=görüş|order=sipariş vermek|pain=ağrı|patient=sabırlı|peace=barış|pocket=cep|polite=kibar|poor=fakir|prefer=tercih etmek|prepare=hazırlamak|prize=ödül|promise=söz vermek|protect=korumak|proud=gururlu|quiet=sessiz|rain=yağmur|reach=ulaşmak|ready=hazır|receive=teslim almak|remember=hatırlamak|repair=tamir etmek|rich=zengin|river=nehir|rule=kural|safe=güvenli|save=kurtarmak|search=aramak|secret=sır|sell=satmak|send=göndermek|share=paylaşmak|sharp=keskin|shout=bağırmak|shy=utangaç|sick=hasta|simple=basit|skill=beceri|sky=gökyüzü|smell=koku|soft=yumuşak|solve=çözmek|spend=harcamak|strange=tuhaf|strong=güçlü|storm=fırtına|suddenly=aniden|surprised=şaşırmış|taste=tat|teach=öğretmek|thief=hırsız|thin=ince|tired=yorgun|tool=alet|travel=seyahat etmek|true=gerçek|trust=güvenmek|ugly=çirkin|understand=anlamak|useful=faydalı|village=köy|visit=ziyaret etmek|voice=ses|wait=beklemek|wake up=uyanmak|war=savaş|waste=israf etmek|weak=zayıf|weather=hava durumu|wide=geniş|win=kazanmak|wise=bilge|worried=endişeli|wrong=yanlış|young=genç|belong=ait olmak|believe=inanmak|bored=sıkılmış|boring=sıkıcı|cheerful=neşeli|cousin=kuzen|customer=müşteri|delicious=lezzetli|dentist=diş hekimi|elbow=dirsek|flood=sel|ghost=hayalet|honest=dürüst|knee=diz|leaf=yaprak|neck=boyun|shelf=raf|rope=ip|shadow=gölge|sheep=koyun|shoulder=omuz|stairs=merdiven|tooth=diş|wallet=cüzdan|wheel=tekerlek|wing=kanat|wood=tahta|pillow=yastık|blanket=battaniye|ceiling=tavan|cloud=bulut|desert=çöl|earthquake=deprem|fork=çatal|hill=tepe|insect=böcek|lake=göl|nail=tırnak|sand=kum|soap=sabun|spoon=kaşık|square=kare|tail=kuyruk|throat=boğaz'.split('|').map(p => { const [en, tr] = p.split('='); return { en, tr }; });
+function seededRand(seed){
+  let x = (seed >>> 0) || 1;
+  return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+}
+function shuffleWith(arr, rnd){ const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function vocabDayNum(ds){ return Math.floor(Date.UTC(+ds.slice(0, 4), +ds.slice(5, 7) - 1, +ds.slice(8, 10)) / 864e5); }
+/* Aynı gün her cihazda aynı 10 soru; kelimeler sabit bir karışık sırada günden güne ilerler. */
+function vocabQuestions(ds){
+  const order = vocabQuestions.order || (vocabQuestions.order = shuffleWith(VOCAB.map((_, i) => i), seededRand(20261004)));
+  const day = vocabDayNum(ds), N = order.length, rnd = seededRand(day * 7919 + 17);
+  return Array.from({ length: 10 }, (_, k) => {
+    const w = VOCAB[order[(day * 10 + k) % N]];
+    const others = shuffleWith(VOCAB.filter(v => v.tr !== w.tr), rnd).slice(0, 3).map(v => v.tr);
+    return { en: w.en, tr: w.tr, options: shuffleWith([w.tr].concat(others), rnd) };
+  });
+}
+const vocabReward = score => score >= 10 ? 20 : score >= 8 ? 10 : 0;
+function vocabToday(){
+  const t = todayStr();
+  if (!state.vocab || state.vocab.date !== t) return { date: t, idx: 0, correct: 0, done: false };
+  return state.vocab;
+}
+let vocabLock = false;
+function vocabCard(){
+  const v = vocabToday();
+  const log = state.vocabLog || {};
+  const streakDays = Object.keys(log).filter(d => log[d] && log[d].score >= 8).length;
+  return '<div class="card flex flex-col gap-2.5 ring-1 ring-tertiary-fixed-dim/30">' +
+    '<div class="flex items-center justify-between gap-2">' +
+      '<span class="text-[17px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">translate</span>Günlük Kelime Avı</span>' +
+      '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/15 text-tertiary-fixed-dim text-[11px] font-extrabold">ENGLISH A2-B1</span>' +
+    '</div>' +
+    (v.done
+      ? '<p class="text-[14px] font-bold text-on-surface">Bugün: <span class="' + (v.correct >= 8 ? 'text-primary-container' : 'text-secondary') + '">' + v.correct + '/10</span>' + (v.xp ? ' • <span class="text-primary-container">+' + v.xp + ' XP</span>' : ' • XP yok') + '</p>' +
+        '<p class="text-[12px] font-semibold text-on-surface-variant">Yarın yeni kelimeler seni bekliyor! 🔤' + (streakDays ? ' • Şimdiye kadar ' + streakDays + ' gün 8+ yaptın' : '') + '</p>'
+      : '<p class="text-[12px] font-semibold text-on-surface-variant">10 kelimenin Türkçesini bul. <b class="text-primary-container">10/10: +20 XP</b> • <b class="text-tertiary-fixed-dim">8-9: +10 XP</b> • Günde bir kez!</p>' +
+        '<button onclick="vocabOpen()" class="btn-green"><span class="material-symbols-outlined">play_arrow</span>' + (v.idx > 0 ? 'Devam Et (' + v.idx + '/10)' : 'Başla') + '</button>') +
+  '</div>';
+}
+function vocabOpen(){
+  if (ui.role !== 'student') return;
+  const v = vocabToday();
+  if (v.done) { vocabResult(); return; }
+  state.vocab = v; // bugünün kaydı (ilk açılışta oluşur)
+  vocabLock = false;
+  vocabRender();
+}
+function vocabRender(){
+  const v = state.vocab, qs = vocabQuestions(v.date), q = qs[v.idx];
+  openDetail(
+    '<div class="flex flex-col gap-4">' +
+      '<div class="flex items-center justify-between"><span class="text-[12px] font-extrabold text-on-surface-variant">SORU ' + (v.idx + 1) + '/10</span>' +
+        '<span class="text-[12px] font-extrabold text-primary-container">✓ ' + v.correct + '</span></div>' +
+      '<div class="h-2 rounded-full bg-surface-container-lowest overflow-hidden"><div class="h-full bg-tertiary-fixed-dim" style="width:' + (v.idx * 10) + '%"></div></div>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant text-center">Bu kelimenin Türkçesi ne?</p>' +
+      '<p class="text-[30px] font-extrabold text-primary text-center leading-tight">' + esc(q.en) + '</p>' +
+      '<div class="flex flex-col gap-2">' + q.options.map((o, i) =>
+        '<button id="vq-' + i + '" onclick="vocabAnswer(' + i + ')" class="w-full py-3 px-4 rounded-xl bg-surface-container-high text-on-surface text-[15px] font-bold text-left shadow-[0_3px_0_#0a0e18] active:translate-y-0.5 transition-all">' + esc(o) + '</button>'
+      ).join('') + '</div>' +
+      '<button onclick="closeDetail();renderAll()" class="text-[12px] font-extrabold text-on-surface-variant">Sonra devam et</button>' +
+    '</div>'
+  );
+}
+function vocabAnswer(i){
+  if (vocabLock || ui.role !== 'student') return;
+  const v = state.vocab; if (!v || v.done || v.date !== todayStr()) { closeDetail(); renderAll(); return; }
+  vocabLock = true;
+  const q = vocabQuestions(v.date)[v.idx];
+  const ok = q.options[i] === q.tr;
+  const right = q.options.indexOf(q.tr);
+  $('#vq-' + right).className = $('#vq-' + right).className.replace('bg-surface-container-high text-on-surface', 'bg-primary-container text-on-primary-container');
+  if (!ok) $('#vq-' + i).className = $('#vq-' + i).className.replace('bg-surface-container-high text-on-surface', 'bg-error-container text-on-error-container');
+  v.correct += ok ? 1 : 0;
+  v.idx += 1;
+  if (v.idx >= 10) {
+    v.done = true;
+    v.xp = vocabReward(v.correct);
+    if (v.xp) { state.xp = (state.xp || 0) + v.xp; state.totalXp = (state.totalXp || 0) + v.xp; }
+    state.vocabLog = state.vocabLog || {};
+    state.vocabLog[v.date] = { score: v.correct, xp: v.xp };
+    checkBadges();
+  }
+  save(); if (ok) beep(true);
+  setTimeout(() => { vocabLock = false; if (state.vocab.done) vocabResult(); else vocabRender(); }, ok ? 550 : 1100);
+}
+function vocabResult(){
+  const v = vocabToday();
+  const msg = v.correct >= 10 ? 'Kusursuz! 🏆' : v.correct >= 8 ? 'Harika iş! 💪' : 'Yarın tekrar dene! 🔁';
+  openDetail(
+    '<div class="flex flex-col items-center gap-3 text-center">' +
+      '<span class="text-5xl">' + (v.correct >= 10 ? '🏆' : v.correct >= 8 ? '⭐' : '📚') + '</span>' +
+      '<p class="text-[22px] font-extrabold text-primary">' + v.correct + '/10</p>' +
+      '<p class="text-[15px] font-bold text-on-surface">' + msg + '</p>' +
+      '<p class="text-[14px] font-extrabold ' + (v.xp ? 'text-primary-container' : 'text-on-surface-variant') + '">' + (v.xp ? '+' + v.xp + ' XP kazandın!' : '8 ve üzeri yaparsan XP kazanırsın') + '</p>' +
+      '<div class="w-full flex flex-col gap-1 text-left">' + vocabQuestions(v.date).map(q => '<div class="flex justify-between gap-2 text-[12px] font-semibold px-2 py-1 rounded bg-surface-container-lowest"><span class="text-on-surface">' + esc(q.en) + '</span><span class="text-on-surface-variant">' + esc(q.tr) + '</span></div>').join('') + '</div>' +
+      '<button onclick="closeDetail();renderAll()" class="btn-ghost">Kapat</button>' +
+    '</div>'
+  );
+}
 /* ---- Argo'dan gelen ödevler (GitHub Actions ile otomatik, veli onayına düşer) ---- */
 function argoItems(){
   return Object.values(state.argoInbox || {}).filter(x => x && x.id).sort((a,b) => String(a.dueDate).localeCompare(String(b.dueDate)));
@@ -1716,6 +1820,8 @@ function statsCard(){
       tile('date_range', 'text-tertiary-fixed-dim', 'Bu Hafta', '+' + nf(ws.xp) + ' XP', ws.n + ' kazanım (son 7 gün)') +
       tile('task_alt', 'text-primary-container', 'Tamamlanan', nf(doneCount()), 'onaylanmış görev') +
     '</div>' +
+    (() => { const v = vocabToday(); return '<p class="text-[12px] font-bold text-on-surface-variant flex items-center gap-1.5"><span class="material-symbols-outlined text-base text-tertiary-fixed-dim">translate</span>Bugünkü Kelime Avı: ' +
+      (v.done ? '<span class="' + (v.correct >= 8 ? 'text-primary-container' : 'text-secondary') + '">' + v.correct + '/10' + (v.xp ? ' • +' + v.xp + ' XP' : '') + '</span>' : v.idx ? 'yarıda (' + v.idx + '/10)' : 'henüz oynanmadı') + '</p>'; })() +
   '</div>';
 }
 function renderPanel(){
