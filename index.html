@@ -545,6 +545,7 @@ function migrate(s){
   s.badges = s.badges || {}; s.alarmsLast = s.alarmsLast || {};
   s.argoInbox = s.argoInbox || {}; s.argoSeen = s.argoSeen || {};
   s.vocabLog = s.vocabLog || {};
+  if (!s.autoMissFrom) s.autoMissFrom = new Date().toISOString(); // otomatik "Yapılmadı" bu andan sonra dolanlara uygulanır
   s.totalXp = Math.max(0, Number(s.totalXp) || Number(s.xp) || 0);
   s.gold = Math.max(0, Number(s.gold) || 0);
   s.level10RewardClaimed = !!s.level10RewardClaimed;
@@ -662,6 +663,7 @@ function fbOnValue(snap){
   argoSyncCheck();
   FB.applyingRemote = false;
   if (hasPending) { fbPush(); toast('☁️ Çevrimdışı değişiklikler buluta eklendi'); }
+  autoMissCheck();
 }
 function fbOnError(err){
   const msg = String((err && (err.code || err.message)) || err);
@@ -788,8 +790,15 @@ function removeHistory(xp, date){
   h.n = Math.max(0, h.n - 1);
   if (h.n === 0) state.history = state.history.filter(x => x !== h);
 }
+/* "Yapılmadı" olan en son görevin günü: seri o gün ve öncesini saymaz (sıfırdan başlar). */
+function streakResetDay(){
+  let d = '';
+  (state.tasks || []).forEach(t => { if (t.status === 'missed' && t.missedAt && t.missedAt > d) d = t.missedAt; });
+  return d;
+}
 function recalcStreak(){
-  const days = [...new Set(state.history.filter(h => h.n > 0).map(h => h.d))].sort();
+  const reset = streakResetDay();
+  const days = [...new Set(state.history.filter(h => h.n > 0 && (!reset || h.d > reset)).map(h => h.d))].sort();
   if (!days.length) { state.streak = 0; state.lastCompletionDate = null; return; }
   let streak = 1;
   for (let i = days.length - 1; i > 0; i--) {
@@ -805,6 +814,10 @@ function recalcStreak(){
 function currentStreak(){
   const last = state.lastCompletionDate;
   return (last === todayStr() || last === ymd(addDays(-1))) ? (state.streak || 0) : 0;
+}
+function weekPenalty(){
+  const from = ymd(addDays(-6));
+  return (state.tasks || []).reduce((a, t) => a + (t.status === 'missed' && t.missedAt >= from ? (Number(t.penaltyXp) || 0) : 0), 0);
 }
 function weekStats(){
   let xp = 0, n = 0;
@@ -957,6 +970,7 @@ function xpBadge(xp, gold){
   return '<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-tertiary-fixed text-[12px] font-extrabold">+' + xp + ' XP · +' + (gold ?? taskGold({ xp })) + ' 🪙</span>';
 }
 function statusChip(t){
+  if (t.status === 'missed') return '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">cancel</span>Yapılmadı' + (t.penaltyXp ? ' • -' + nf(t.penaltyXp) + ' XP' : '') + '</span>';
   if (t.status === 'pending') return '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">hourglass_top</span>Onay Bekliyor</span>';
   if (t.status === 'completed') return '<span class="px-2 py-0.5 rounded-full bg-primary-container/15 text-primary-container text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">verified</span>Tamamlandı</span>';
   if (isOverdue(t)) return '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-extrabold uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">warning</span>Gecikti</span>';
@@ -992,7 +1006,7 @@ function taskCard(t, compact){
           '<span class="material-symbols-outlined text-sm">alarm</span>' + esc(fmtDue(t)) +
         '</span>' +
       '</div>' +
-      (t.status === 'active'
+      (t.status === 'active' && ui.role !== 'parent'
         ? '<button onclick="completeTask(\'' + t.id + '\')" class="flex items-center gap-1.5 py-2 px-4 rounded-full bg-secondary-container text-on-secondary text-[13px] font-extrabold shadow-[0_3px_0_#572000] active:translate-y-0.5 transition-all">' +
             '<span class="material-symbols-outlined text-base">check_circle</span>Tamamla</button>'
         : '') +
@@ -1016,6 +1030,7 @@ function openTaskDetail(id){
         '<div class="rounded-lg bg-surface-container-low p-2.5"><span class="text-[10px] font-extrabold uppercase text-on-surface-variant">Son Tarih</span><p class="text-[13px] font-extrabold text-on-surface">' + esc(fmtDue(t)) + '</p></div>' +
       '</div>' +
       '<div class="flex justify-center">' + statusChip(t) + '</div>' +
+      (t.status === 'missed' ? '<p class="text-[12px] font-semibold text-on-surface-variant text-center">Süresi geçtiği için yapılmadı sayıldı. Komutan "yapıldı" sayarsa ceza geri alınır.</p>' : '') +
       (t.status === 'active' ? '<button onclick="closeDetail();completeTask(\'' + t.id + '\')" class="btn-orange"><span class="material-symbols-outlined text-base">check_circle</span>Görevi Tamamla</button>' : '') +
       '<button onclick="closeDetail()" class="btn-ghost">Kapat</button>' +
     '</div>');
@@ -1125,6 +1140,8 @@ function renderHome(){
       '</div>' +
     '</div>' +
     bossAlarmCard() +
+    /* Yapılmayan görevler */
+    missedStudentCard() +
     /* Günlük Kelime Avı */
     vocabCard() +
     /* Bugünün Görevleri */
@@ -1178,10 +1195,12 @@ function renderDersler(){
   let list = state.tasks.filter(t => (derSubject === 'all' || t.subject === derSubject) && (!q || (t.title + ' ' + t.desc).toLowerCase().includes(q)));
   const active = list.filter(t => t.status === 'active' || t.status === 'pending').sort((a,b) => taskDue(a) - taskDue(b));
   const done = list.filter(t => t.status === 'completed').sort((a,b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
-  const allTasks = active.concat(done);
+  const missedList = list.filter(t => t.status === 'missed').sort((a,b) => String(b.missedAt || '').localeCompare(String(a.missedAt || '')));
+  const allTasks = active.concat(missedList, done);
   const showList = derTab === 'active' ? active : derTab === 'done' ? done : allTasks;
   const activeCount = state.tasks.filter(t => t.status === 'active' || t.status === 'pending').length;
   const doneCountAll = state.tasks.filter(t => t.status === 'completed').length;
+  const missedCountAll = state.tasks.filter(t => t.status === 'missed').length;
 
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="relative">' +
@@ -1189,7 +1208,7 @@ function renderDersler(){
       '<input id="der-search" class="inp pl-11" placeholder="Görev veya ders ara..." value="' + esc(derSearch) + '" oninput="derSearch=this.value;renderDersler();document.getElementById(\'der-search\').focus()">' +
     '</div>' +
     '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-gutter px-gutter">' + chips + '</div>' +
-    statusTabs(derTab, 'setDerTab', { active: activeCount, done: doneCountAll, all: activeCount + doneCountAll }) +
+    statusTabs(derTab, 'setDerTab', { active: activeCount, done: doneCountAll, all: activeCount + doneCountAll + missedCountAll }) +
     '<div class="flex flex-col gap-2.5">' +
       (showList.length ? showList.map(t => taskCard(t)).join('')
         : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : derTab === 'done' ? 'Tamamlanan görev yok' : 'Görev bulunamadı') + '</p></div>') +
@@ -1222,7 +1241,7 @@ function renderCalendar(){
       '</button>');
   }
   const selectedTasks = taskByDate[calSelected] || [], selectedExams = examByDate[calSelected] || [];
-  const taskRows = selectedTasks.length ? selectedTasks.map(t => '<div class="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg bg-surface-container-lowest"><span class="material-symbols-outlined text-base ' + (t.status === 'completed' ? 'text-primary-container' : 'text-tertiary-fixed-dim') + '">' + (t.status === 'completed' ? 'check_circle' : 'assignment') + '</span><span class="flex-1 min-w-0"><span class="block text-[13px] font-extrabold text-on-surface truncate">' + esc(t.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant truncate">' + (t.status === 'completed' ? 'Tamamlandı' : (SUBJECTS[t.subject] || {}).name || '') + '</span></span></div>').join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için ödev yok.</p>';
+  const taskRows = selectedTasks.length ? selectedTasks.map(t => '<div class="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg bg-surface-container-lowest"><span class="material-symbols-outlined text-base ' + (t.status === 'completed' ? 'text-primary-container' : t.status === 'missed' ? 'text-error' : 'text-tertiary-fixed-dim') + '">' + (t.status === 'completed' ? 'check_circle' : t.status === 'missed' ? 'cancel' : 'assignment') + '</span><span class="flex-1 min-w-0"><span class="block text-[13px] font-extrabold text-on-surface truncate">' + esc(t.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant truncate">' + (t.status === 'completed' ? 'Tamamlandı' : (SUBJECTS[t.subject] || {}).name || '') + '</span></span></div>').join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için ödev yok.</p>';
   const examRows = selectedExams.length ? selectedExams.map(e => '<div class="flex items-center gap-2.5 p-2.5 rounded-lg bg-secondary-container/10"><span class="material-symbols-outlined text-secondary-container">local_fire_department</span><span class="flex-1"><span class="block text-[13px] font-extrabold text-primary">' + esc(e.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(e.time || '09:30') + (e.note ? ' · ' + esc(e.note) : '') + '</span></span></div>').join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için sınav yok.</p>';
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="card"><div class="flex items-center justify-between gap-2"><button onclick="calChange(-1)" class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined">chevron_left</span></button><div class="text-center"><p class="text-[19px] font-extrabold text-primary">' + MONTHS_TR[m] + ' ' + y + '</p><p class="text-[11px] font-semibold text-on-surface-variant">Gün seçerek ödev ve sınavları gör</p></div><button onclick="calChange(1)" class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined">chevron_right</span></button></div>' +
@@ -1267,7 +1286,7 @@ function weekGrid(filter){
       const sub = schedSubject(it);
       const col = it.type === 'school' ? (SUBJECT_COLORS[sub] || '#7bd0ff') : '#fe6b00';
       const ds = ymd(d);
-      const hw = sub ? state.tasks.filter(t => t.subject === sub && t.dueDate === ds && t.status !== 'completed').length : 0;
+      const hw = sub ? state.tasks.filter(t => t.subject === sub && t.dueDate === ds && (t.status === 'active' || t.status === 'pending')).length : 0;
       const ex = sub ? state.exams.some(e => e.subject === sub && e.date === ds) : false;
       const isNow = ds === today && nowMin >= toMin(it.start) && nowMin < toMin(it.end);
       const label = sub ? SUBJECT_SHORT[sub] : it.title;
@@ -1297,10 +1316,10 @@ function openSchedDetail(id, ds){
   const d = new Date(ds + 'T00:00:00');
   const hw = sub ? state.tasks.filter(t => t.subject === sub && t.dueDate === ds) : [];
   const ex = sub ? state.exams.filter(e => e.subject === sub && e.date === ds) : [];
-  const upcoming = sub ? state.tasks.filter(t => t.subject === sub && t.status !== 'completed' && t.dueDate > ds).sort((a,b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 3) : [];
+  const upcoming = sub ? state.tasks.filter(t => t.subject === sub && (t.status === 'active' || t.status === 'pending') && t.dueDate > ds).sort((a,b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 3) : [];
   const col = it.type === 'school' ? (SUBJECT_COLORS[sub] || '#7bd0ff') : '#fe6b00';
   const taskLine = t => '<button onclick="closeDetail();openTaskDetail(\'' + t.id + '\')" class="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-surface-container-lowest">' +
-    '<span class="material-symbols-outlined text-base ' + (t.status === 'completed' ? 'text-primary-container' : t.status === 'pending' ? 'text-tertiary-fixed-dim' : 'text-on-surface-variant') + '">' + (t.status === 'completed' ? 'check_circle' : t.status === 'pending' ? 'hourglass_top' : 'radio_button_unchecked') + '</span>' +
+    '<span class="material-symbols-outlined text-base ' + (t.status === 'completed' ? 'text-primary-container' : t.status === 'pending' ? 'text-tertiary-fixed-dim' : t.status === 'missed' ? 'text-error' : 'text-on-surface-variant') + '">' + (t.status === 'completed' ? 'check_circle' : t.status === 'pending' ? 'hourglass_top' : t.status === 'missed' ? 'cancel' : 'radio_button_unchecked') + '</span>' +
     '<span class="flex-1 min-w-0"><span class="block text-[13px] font-bold text-on-surface truncate">' + esc(t.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(fmtDue(t)) + '</span></span></button>';
   openDetail(
     '<div class="flex flex-col gap-3">' +
@@ -1722,7 +1741,7 @@ function argoToTask(id){
   const task = { id: uid(), title, desc: String(val('desc', it.descIt || '')).trim(), subject,
     difficulty: it.difficulty === 'boss' ? 'boss' : 'normal',
     xp: Math.max(10, Math.min(5000, parseInt(val('xp', it.xp)) || 100)),
-    createdAt: todayStr(), dueDate, dueTime: '08:00', status: 'active', source: 'argo', argoId: id };
+    createdAt: todayStr(), dueDate, dueTime: '08:00', status: 'active', source: 'argo', argoId: id, activatedAt: new Date().toISOString() };
   task.gold = taskGold(task);
   return task;
 }
@@ -1831,7 +1850,7 @@ function statsCard(){
     '<div class="grid grid-cols-2 gap-2">' +
       tile('bolt', 'text-primary-container', 'Toplam XP', nf(state.totalXp), 'Seviye ilerlemesi') +
       tile('paid', 'text-secondary-container', 'Altın', nf(state.gold) + ' 🪙', held ? nf(held) + ' 🪙 onay bekleyen takasta' : 'Harcanabilir bakiye') +
-      tile('date_range', 'text-tertiary-fixed-dim', 'Bu Hafta', '+' + nf(ws.xp) + ' XP', ws.n + ' kazanım (son 7 gün)') +
+      tile('date_range', 'text-tertiary-fixed-dim', 'Bu Hafta', '+' + nf(ws.xp) + ' XP', ws.n + ' kazanım' + (weekPenalty() ? ' • <span class="text-error">-' + nf(weekPenalty()) + ' XP ceza</span>' : ' (son 7 gün)')) +
       tile('task_alt', 'text-primary-container', 'Tamamlanan', nf(doneCount()), 'onaylanmış görev') +
     '</div>' +
     (() => { const v = vocabToday(); return '<p class="text-[12px] font-bold text-on-surface-variant flex items-center gap-1.5"><span class="material-symbols-outlined text-base text-tertiary-fixed-dim">translate</span>Bugünkü Kelime Avı: ' +
@@ -1857,6 +1876,7 @@ function renderPanel(){
         '<button onclick="' + (isTask ? 'approveTask' : 'approveRedeem') + '(\'' + item.id + '\')" class="btn-green !py-2 text-[13px]"><span class="material-symbols-outlined text-base">check</span>Onayla</button>' +
         '<button onclick="' + (isTask ? 'rejectTask' : 'rejectRedeem') + '(\'' + item.id + '\')" class="btn-ghost !py-2 text-[13px] text-error"><span class="material-symbols-outlined text-base">close</span>Reddet</button>' +
       '</div>' +
+      (isTask ? '<button onclick="markTaskMissed(\'' + item.id + '\')" class="text-[12px] font-extrabold text-error/80 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">cancel</span>Aslında yapmadı — Yapılmadı say</button>' : '') +
     '</div>';
   };
   const tplRow = TEMPLATES.map((tp, i) =>
@@ -1899,6 +1919,8 @@ function renderPanel(){
         ? '<div class="flex flex-col gap-2.5">' + pt.map(t => approvalCard('task', t)).join('') + pr.map(r => approvalCard('reward', r)).join('') + '</div>'
         : '<p class="text-[13px] font-semibold text-on-surface-variant">Bekleyen onay yok. ' + esc(state.student.nickname) + ' görev tamamladığında burada görünecek.</p>') +
     '</div>' +
+    /* Yapılmayan görevler */
+    missedPanelCard() +
     /* Hızlı erişim */
     '<div class="grid grid-cols-3 gap-2">' +
       '<button onclick="showView(\'gorev\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-3xl">add_task</span><span class="text-[12px] font-extrabold text-on-surface">Görev Ata</span></button>' +
@@ -1936,7 +1958,8 @@ function renderGorev(){
   const completed = state.tasks.filter(t => t.status === 'completed' && bySubject(t)).sort((a,b) => String(b.completedAt || '').localeCompare(String(a.completedAt || '')));
   const activeCount = state.tasks.filter(t => (t.status === 'active' || t.status === 'pending') && bySubject(t)).length;
   const completedCount = state.tasks.filter(t => t.status === 'completed' && bySubject(t)).length;
-  const allCount = activeCount + completedCount;
+  const missedForList = state.tasks.filter(t => t.status === 'missed' && bySubject(t)).sort((a,b) => String(b.missedAt || '').localeCompare(String(a.missedAt || '')));
+  const allCount = activeCount + completedCount + missedForList.length;
   const t0 = todayStr();
   const subBtns = Object.keys(SUBJECTS).map(s =>
     '<button onclick="tfSub=\'' + s + '\';renderGorev()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
@@ -1945,7 +1968,7 @@ function renderGorev(){
   ).join('');
   const filterSubjects = '<button onclick="gfSub=\'all\';renderGorev()" class="shrink-0 px-3 py-2 rounded-full text-[12px] font-extrabold ' + (gfSub === 'all' ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">TÜM DERSLER</button>' + Object.keys(SUBJECTS).map(s => '<button onclick="gfSub=\'' + s + '\';renderGorev()" class="shrink-0 px-3 py-2 rounded-full text-[12px] font-extrabold ' + (gfSub === s ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">' + SUBJECTS[s].name + '</button>').join('');
   const taskFilters = '<div class="card !p-3 flex flex-col gap-2">' + statusTabs(gfStatus, 'setGfStatus', { active: activeCount, done: completedCount, all: allCount }) + '<div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">' + filterSubjects + '</div></div>';
-  const allTasks = active.concat(completed);
+  const allTasks = active.concat(missedForList, completed);
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="card flex flex-col gap-3">' +
       '<h2 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">add_task</span>Yeni Görev (Quest) Oluştur</h2>' +
@@ -1971,17 +1994,10 @@ function renderGorev(){
     (gfStatus === 'active' ? '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">format_list_bulleted</span>Devam Eden Görevler (' + active.length + ')</h3>' : gfStatus === 'done' ? '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">task_alt</span>Tamamlanan Görevler (' + completed.length + ')</h3>' : '<h3 class="text-[16px] font-bold text-on-surface flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-xl">view_list</span>Tüm Ödevler (' + allTasks.length + ')</h3>') +
     '<div class="flex flex-col gap-2.5">' +
       (gfStatus === 'active' ?
-      (active.length ? active.map(t =>
-        '<div class="card">' + taskCard(t) +
-        '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
-        '<button onclick="deleteTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-error-container/20 text-error text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">delete</span>Görevi Sil</button></div>'
-      ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') :
-      gfStatus === 'done' ? (completed.length ? completed.map(t =>
-        '<div class="card">' + taskCard(t) +
-        '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button>' +
-        '<button onclick="undoCompletedTask(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">undo</span>Tamamlamayı Geri Al</button></div>'
-      ).join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') :
-      (allTasks.length ? allTasks.map(t => '<div class="card">' + taskCard(t) + '<button onclick="editTaskAll(\'' + t.id + '\')" class="mt-2 w-full py-1.5 rounded-full bg-primary-container/15 text-primary-container text-[11px] font-extrabold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Görevi Düzenle</button></div>').join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz ödev yok.</div>')) +
+        (active.length ? active.map(t => '<div class="card">' + taskCard(t) + parentTaskActions(t) + '</div>').join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Aktif görev yok — yukarıdan oluştur.</div>') :
+      gfStatus === 'done' ?
+        (completed.length ? completed.map(t => '<div class="card">' + taskCard(t) + parentTaskActions(t) + '</div>').join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Henüz tamamlanan görev yok.</div>') :
+        (allTasks.length ? allTasks.map(t => '<div class="card">' + taskCard(t) + parentTaskActions(t) + '</div>').join('') : '<div class="card py-6 text-center text-[13px] font-semibold text-on-surface-variant">Görev yok.</div>')) +
     '</div>' +
   '</div>';
 }
@@ -2004,7 +2020,7 @@ function submitTask(){
   const gold = Math.max(0, Math.min(500, parseInt($('#tf-gold').value) || 0));
   const date = $('#tf-date').value || todayStr();
   const time = $('#tf-time').value || '21:00';
-  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, gold, createdAt: todayStr(), dueDate: date, dueTime: time, status: 'active' });
+  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, gold, createdAt: todayStr(), dueDate: date, dueTime: time, status: 'active', activatedAt: new Date().toISOString() });
   save(); renderGorev();
   toast('⚔️ Görev yayınlandı! ' + (state.student.nickname || '') + ' ekranında görünecek.');
   beep(true);
@@ -2163,7 +2179,7 @@ function bulkAdd(){
   if (sel.some(r => !r.title.trim() || !r.date)) { toast('⚠️ Başlığı ya da tarihi boş görev var'); return; }
   sel.forEach(r => {
     const task = { id: uid(), title: r.title.trim(), desc: r.desc, subject: r.subject, difficulty: r.difficulty,
-      xp: Math.max(10, Math.min(5000, Number(r.xp) || 100)), createdAt: todayStr(), dueDate: r.date, dueTime: '08:00', status: 'active' };
+      xp: Math.max(10, Math.min(5000, Number(r.xp) || 100)), createdAt: todayStr(), dueDate: r.date, dueTime: '08:00', status: 'active', activatedAt: new Date().toISOString() };
     task.gold = taskGold(task);
     state.tasks.push(task);
   });
@@ -2242,9 +2258,12 @@ function editTaskAll(id){
   save(); renderGorev(); toast('✅ Görev tamamen güncellendi');
 }
 function deleteTask(id){
-  askConfirm('Görevi sil', 'Bu görev kalıcı olarak silinecek. Emin misin?', () => {
+  const tk = state.tasks.find(t => t.id === id);
+  const pen = tk && tk.status === 'missed' ? (Number(tk.penaltyXp) || 0) : 0;
+  askConfirm('Görevi sil', 'Bu görev kalıcı olarak silinecek.' + (pen ? ' ' + nf(pen) + ' XP ceza geri alınır.' : '') + ' Emin misin?', () => {
+    if (tk && tk.status === 'missed') revertPenalty(tk);
     state.tasks = state.tasks.filter(t => t.id !== id);
-    save(); renderGorev(); toast('Görev silindi');
+    recalcStreak(); save(); renderAll(); toast('Görev silindi');
   }, 'Sil');
 }
 
@@ -2644,29 +2663,177 @@ function resetProgress(){
     state.history = [];
     state.badges = {};
     state.redemptions = [];
-    state.tasks.forEach(t => { t.status = 'active'; t.completedAt = null; t.submittedAt = null; });
+    const nowIso = new Date().toISOString();
+    state.tasks.forEach(t => { t.status = 'active'; t.completedAt = null; t.submittedAt = null; t.missedAt = null; t.penaltyXp = 0; t.missedAuto = false; t.goldPaid = false; t.activatedAt = nowIso; });
     state.exams.forEach(e => { delete e.score; delete e.awardedXp; delete e.awardedAt; });
     save(); renderAll(); toast('Ruz ilerlemesi sıfırlandı: LVL 1 • 0 XP');
   }, 'Sıfırla');
 }
 
 /* ---------- Onay / Red ---------- */
+/* ---------- Yapılmadı (süresi geçen görev) ---------- */
+/* Ceza: görevin XP'si kadar XP düşer (toplam 0'ın altına inmez), altın hiç silinmez, seri sıfırlanır. */
+function applyPenalty(t, day, auto){
+  const p = Math.min(Math.max(0, Number(t.xp) || 0), Math.max(0, Number(state.totalXp) || 0));
+  state.totalXp = Math.max(0, (Number(state.totalXp) || 0) - p);
+  state.xp = Math.max(0, (Number(state.xp) || 0) - p);
+  t.status = 'missed'; t.missedAt = day; t.missedAuto = !!auto; t.penaltyXp = p;
+  t.submittedAt = null; t.completedAt = null;
+}
+function revertPenalty(t){
+  const p = Number(t.penaltyXp) || 0;
+  if (p) { state.totalXp = (Number(state.totalXp) || 0) + p; state.xp = (Number(state.xp) || 0) + p; }
+  t.penaltyXp = 0; t.missedAt = null; t.missedAuto = false;
+}
+/* Görevi tamamlandı yapar, XP'yi ve (daha önce verilmediyse) altını öder. */
+function completeAndReward(t, day){
+  t.status = 'completed'; t.completedAt = day; t.submittedAt = null;
+  state.xp = (Number(state.xp) || 0) + t.xp;
+  state.totalXp = (Number(state.totalXp) || 0) + t.xp;
+  const g = t.goldPaid ? 0 : taskGold(t);
+  state.gold = (Number(state.gold) || 0) + g;
+  t.goldPaid = true;
+  addHistory(t.xp, day);
+  return g;
+}
+/* Süresi geçen aktif görevleri otomatik "Yapılmadı" yapar.
+   Yalnızca görev açıkken süresi dolanlar: güncellemeden önceki eski görevler ve
+   süresi geçmişken açılan/geri çevrilen görevler cezalandırılmaz. */
+function autoMissCheck(){
+  if (!state || !state.tasks) return;
+  if (state.settings && state.settings.firebase && !FB.ready) return; // önce buluttaki güncel veriyi bekle
+  if (FB.connected && FB.ready && FB.base && !FB.base.autoMissFrom) fbPush(); // başlangıç zamanını buluta yaz
+  const now = new Date();
+  const from = state.autoMissFrom ? new Date(state.autoMissFrom) : now;
+  const missed = [];
+  state.tasks.forEach(t => {
+    if (t.status !== 'active') return;
+    const due = taskDue(t);
+    if (isNaN(due) || due >= now) return;
+    const since = t.activatedAt ? new Date(t.activatedAt) : from;
+    if (!(due > since)) return;
+    applyPenalty(t, ymd(due), true);
+    missed.push(t);
+  });
+  if (!missed.length) return;
+  recalcStreak(); save(); renderAll();
+  const total = missed.reduce((a, t) => a + (t.penaltyXp || 0), 0);
+  toast('⏰ Süresi geçen ' + (missed.length === 1 ? '"' + missed[0].title + '"' : missed.length + ' görev') + ' yapılmadı sayıldı • -' + nf(total) + ' XP • Seri sıfırlandı');
+}
+function markTaskMissed(id){
+  if (ui.role !== 'parent') return;
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status === 'missed') return;
+  const wasDone = t.status === 'completed';
+  askConfirm('Yapılmadı olarak işaretle', '"' + t.title + '" yapılmadı sayılacak: -' + nf(t.xp) + ' XP ceza' + (wasDone ? ' (daha önce verilen +' + nf(t.xp) + ' XP de geri alınır)' : '') + ', seri sıfırlanır. Altın silinmez.', () => {
+    if (wasDone) {
+      state.totalXp = Math.max(0, (Number(state.totalXp) || 0) - t.xp);
+      state.xp = Math.max(0, (Number(state.xp) || 0) - t.xp);
+      removeHistory(t.xp, t.completedAt);
+      t.goldPaid = true; // altını zaten aldı; tekrar yapıldı sayılırsa ikinci kez verilmez
+    }
+    applyPenalty(t, todayStr(), false);
+    recalcStreak(); save(); renderAll();
+    toast('❌ Yapılmadı • -' + nf(t.penaltyXp) + ' XP • Seri sıfırlandı');
+  }, 'Yapılmadı');
+}
+function markTaskDone(id){
+  if (ui.role !== 'parent') return;
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status === 'completed') return;
+  const wasMissed = t.status === 'missed';
+  const pen = wasMissed ? (Number(t.penaltyXp) || 0) : 0;
+  askConfirm('Yapıldı say', '"' + t.title + '" tamamlandı sayılacak: ' + (pen ? nf(pen) + ' XP ceza geri alınır, ' : '') + '+' + nf(t.xp) + ' XP' + (t.goldPaid ? '' : ' ve +' + taskGold(t) + ' 🪙') + ' verilir.', () => {
+    const day = (t.status === 'pending' && t.submittedAt && t.submittedAt <= todayStr()) ? t.submittedAt : todayStr();
+    if (wasMissed) revertPenalty(t);
+    const g = completeAndReward(t, day);
+    recalcStreak(); checkBadges(); save(); renderAll();
+    toast('✅ Yapıldı sayıldı • ' + (pen ? '+' + nf(pen) + ' ceza iadesi, ' : '') + '+' + nf(t.xp) + ' XP' + (g ? ' • +' + g + ' 🪙' : ''));
+    beep(false);
+  }, 'Yapıldı');
+}
+function reactivateTask(id){
+  if (ui.role !== 'parent') return;
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'missed') return;
+  const def = t.dueDate > todayStr() ? t.dueDate : ymd(addDays(1));
+  openDetail(
+    '<div class="flex flex-col gap-3">' +
+      '<h3 class="text-[17px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">restart_alt</span>Yeniden Aktifleştir</h3>' +
+      '<p class="text-[13px] font-semibold text-on-surface">' + esc(t.title) + '</p>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">' + (t.penaltyXp ? nf(t.penaltyXp) + ' XP ceza geri alınır. ' : '') + 'Görev ' + esc(state.student.nickname || '') + '\'un listesine yeni teslim tarihiyle döner.</p>' +
+      '<div class="grid grid-cols-2 gap-2"><div><label class="lbl">Yeni tarih</label><input id="ra-date" type="date" class="inp" value="' + def + '" min="' + todayStr() + '"></div>' +
+      '<div><label class="lbl">Saat</label><input id="ra-time" type="time" class="inp" value="' + esc(t.dueTime || '08:00') + '"></div></div>' +
+      '<button onclick="confirmReactivate(\'' + t.id + '\')" class="btn-green"><span class="material-symbols-outlined">restart_alt</span>Aktifleştir</button>' +
+      '<button onclick="closeDetail()" class="btn-ghost">Vazgeç</button>' +
+    '</div>');
+}
+function confirmReactivate(id){
+  const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'missed') return;
+  const date = $('#ra-date').value, time = $('#ra-time').value || t.dueTime || '08:00';
+  if (!date || new Date(date + 'T' + time) <= new Date()) { toast('⚠️ Gelecekte bir tarih ve saat seç'); return; }
+  revertPenalty(t);
+  t.status = 'active'; t.dueDate = date; t.dueTime = time; t.activatedAt = new Date().toISOString();
+  recalcStreak(); save(); closeDetail(); renderAll();
+  toast('🔄 Görev yeniden aktif • ' + fmtDue(t));
+}
+/* Veli görev kartı altındaki işlem düğmeleri (duruma göre). */
+function parentTaskActions(t){
+  const b = (fn, icon, label, cls) => '<button onclick="' + fn + '(\'' + t.id + '\')" class="py-1.5 rounded-full text-[11px] font-extrabold flex items-center justify-center gap-1 ' + cls + '"><span class="material-symbols-outlined text-sm">' + icon + '</span>' + label + '</button>';
+  const edit = b('editTaskAll', 'edit', 'Düzenle', 'bg-primary-container/15 text-primary-container');
+  const done = b('markTaskDone', 'task_alt', 'Yapıldı Say', 'bg-primary-container/15 text-primary-container');
+  const miss = b('markTaskMissed', 'cancel', 'Yapılmadı', 'bg-error-container/25 text-error');
+  const del = b('deleteTask', 'delete', 'Sil', 'bg-error-container/15 text-error');
+  let btns;
+  if (t.status === 'missed') btns = [done, b('reactivateTask', 'restart_alt', 'Yeniden Aktif', 'bg-tertiary-fixed-dim/15 text-tertiary-fixed-dim'), edit, del];
+  else if (t.status === 'completed') btns = [edit, b('undoCompletedTask', 'undo', 'Geri Al', 'bg-secondary-container/20 text-secondary'), miss];
+  else btns = [edit, done, miss, del];
+  return '<div class="grid grid-cols-2 gap-1.5 mt-2">' + btns.join('') + '</div>';
+}
+function missedTasks(){
+  return state.tasks.filter(t => t.status === 'missed').sort((a, b) => String(b.missedAt || '').localeCompare(String(a.missedAt || '')));
+}
+/* Veli Paneli: yapılmayan görevler kartı */
+function missedPanelCard(){
+  const list = missedTasks();
+  if (!list.length) return '';
+  return '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md ring-1 ring-error/40">' +
+    '<div class="flex items-center justify-between gap-2">' +
+      '<span class="text-[18px] font-bold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-error">event_busy</span>Yapılmayan Görevler</span>' +
+      '<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[12px] font-extrabold">' + list.length + '</span>' +
+    '</div>' +
+    list.slice(0, 8).map(t =>
+      '<div class="rounded-lg bg-surface-container-lowest p-3 flex flex-col gap-1">' +
+        '<div class="flex items-start justify-between gap-2"><p class="text-[14px] font-extrabold text-primary min-w-0">' + esc(t.title) + '</p>' +
+          '<span class="text-[12px] font-extrabold text-error shrink-0">-' + nf(t.penaltyXp || 0) + ' XP</span></div>' +
+        '<p class="text-[11px] font-semibold text-on-surface-variant">' + esc((SUBJECTS[t.subject] || {}).name || '') + ' • Son tarih: ' + esc(fmtDue(t)) + (t.missedAuto ? ' • süresi doldu' : ' • veli işaretledi') + '</p>' +
+        parentTaskActions(t) +
+      '</div>'
+    ).join('') +
+    (list.length > 8 ? '<p class="text-[12px] font-semibold text-on-surface-variant">Diğerleri: Görev Ata → Tümü</p>' : '') +
+  '</div>';
+}
+/* Öğrenci ana ekranı: son 7 günde yapılmayanlar */
+function missedStudentCard(){
+  const from = ymd(addDays(-6));
+  const list = missedTasks().filter(t => (t.missedAt || '') >= from);
+  if (!list.length) return '';
+  return '<div class="card flex flex-col gap-2 ring-1 ring-error/40">' +
+    '<span class="text-[16px] font-extrabold text-error flex items-center gap-2"><span class="material-symbols-outlined">event_busy</span>Yapılmayan Görevler</span>' +
+    list.map(t => '<div class="flex items-center justify-between gap-2 text-[13px] font-bold"><span class="text-on-surface truncate">' + esc(t.title) + '</span><span class="text-error shrink-0">-' + nf(t.penaltyXp || 0) + ' XP</span></div>').join('') +
+    '<p class="text-[11px] font-semibold text-on-surface-variant">Süresi geçince XP düşer ve seri sıfırlanır. Komutan "yapıldı" sayarsa ceza geri alınır.</p>' +
+  '</div>';
+}
 function approveTask(id){
   const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'pending') return;
   /* XP ve seri, velinin onay günü değil öğrencinin bitirdiği güne yazılır. */
   const doneDay = (t.submittedAt && t.submittedAt <= todayStr()) ? t.submittedAt : todayStr();
-  t.status = 'completed'; t.completedAt = doneDay;
-  state.xp += t.xp;
-  state.totalXp += t.xp;
-  state.gold += taskGold(t);
-  addHistory(t.xp, doneDay); recalcStreak(); checkBadges(); save();
+  const g = completeAndReward(t, doneDay);
+  recalcStreak(); checkBadges(); save();
   renderAll();
-  toast('✅ Onaylandı! +' + t.xp + ' XP • +' + taskGold(t) + ' 🪙 altın');
+  toast('✅ Onaylandı! +' + t.xp + ' XP' + (g ? ' • +' + g + ' 🪙 altın' : ''));
   beep(false);
 }
 function rejectTask(id){
   askConfirm('Görevi reddet', 'Görev tekrar "aktif" duruma döner, XP verilmez.', () => {
-    const t = state.tasks.find(x => x.id === id); if (t) { t.status = 'active'; t.submittedAt = null; }
+    const t = state.tasks.find(x => x.id === id); if (t) { t.status = 'active'; t.submittedAt = null; t.activatedAt = new Date().toISOString(); }
     save(); renderAll(); toast('Görev reddedildi — tekrar tamamlanabilir');
   }, 'Reddet');
 }
@@ -2676,11 +2843,13 @@ function undoCompletedTask(id){
     const oldBadgeCount = Object.keys(state.badges).length;
     state.xp = Math.max(0, state.xp - t.xp);
     state.totalXp = Math.max(0, state.totalXp - t.xp);
-    state.gold = Math.max(0, state.gold - taskGold(t));
+    if (t.goldPaid !== false) state.gold = Math.max(0, state.gold - taskGold(t));
     removeHistory(t.xp, t.completedAt);
     t.status = 'active';
     t.completedAt = null;
     t.submittedAt = null;
+    t.goldPaid = false;
+    t.activatedAt = new Date().toISOString();
     recalcStreak();
     pruneBadges();
     const removedBadges = oldBadgeCount - Object.keys(state.badges).length;
@@ -2769,7 +2938,7 @@ setInterval(() => {
   });
   const clock = $('#clock-now'); if (clock) clock.lastElementChild.textContent = now.toTimeString().slice(0, 5);
 }, 1000);
-setInterval(checkAlarms, 60000);
+setInterval(() => { checkAlarms(); autoMissCheck(); }, 60000);
 
 /* ---------- PWA Manifest ---------- */
 try {
@@ -2784,6 +2953,7 @@ try {
 checkBadges();
 checkAlarms();
 renderAll();
+autoMissCheck();
 /* Yeni kurulumlarda ortak bulut senkronunu otomatik başlat. */
 setTimeout(() => {
   if (!state.settings.firebase) {

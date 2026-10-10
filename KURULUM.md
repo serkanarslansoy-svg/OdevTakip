@@ -166,6 +166,7 @@ ekrana yapıştır. Anahtar yalnızca o cihazda saklanır, buluta gitmez.
 | **Seviye** | Her 500 XP'de 1 seviye + yeni rütbe adı (Çırak Avcı → Boss Termonatör) |
 | **Seri 🔥** | Her onaylanan görev günü seriyi uzatır; gün atlanırsa sıfırlanır |
 | **Sınav notu** | Veli geçmiş sınava 0–10 not girer. Boss sınavında 7+: 100, 8+: 300, 9+: 450, 10: 600 XP; normal sınavda 8+: 150, 9+: 225, 10: 300 XP. Not düzeltilirse XP farkı güncellenir. |
+| **Yapılmadı** | Süresi geçen ve yapılmamış (aktif) görev otomatik "Yapılmadı" olur: görevin XP'si kadar XP düşer, altın silinmez, seri sıfırlanır. Onay bekleyen görevlere dokunulmaz; özellik açılmadan önce süresi geçmiş eski görevler cezalandırılmaz. Veli; Panel'deki "Yapılmayan Görevler" kartından ya da Görev Ata listesinden görevi **Yapıldı Say** (ceza geri alınır, XP ve daha önce verilmediyse altın verilir), **Yapılmadı** (elle ceza) veya **Yeniden Aktif** (yeni tarihle, ceza geri alınır) yapabilir. |
 | **Kelime Avı** | Öğrenci ana ekranında günde bir kez 10 İtalyanca kelime (A2/B1), 4 şıktan Türkçesi seçilir. 10/10: +20 XP, 8-9: +10 XP, 7 ve altı: XP yok. Yarıda kalırsa kaldığı yerden devam eder, tekrar oynanamaz. |
 | **Rozetler** | 8+, 9+, 10 sınav notları; Boss sınavından 8+ ve üç Boss sınavından 8+; görev/XP/ödül rozetleri. Çalışma serisi ve sadece sınava girme rozet kazandırmaz. |
 | **Ödüller** | Veli tanımlar; Ruz XP'sini gerçek ödüllere takas eder, sen onaylarsın |
