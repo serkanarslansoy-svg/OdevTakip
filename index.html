@@ -1922,8 +1922,6 @@ function renderPanel(){
         ? '<div class="flex flex-col gap-2.5">' + pt.map(t => approvalCard('task', t)).join('') + pr.map(r => approvalCard('reward', r)).join('') + '</div>'
         : '<p class="text-[13px] font-semibold text-on-surface-variant">Bekleyen onay yok. ' + esc(state.student.nickname) + ' görev tamamladığında burada görünecek.</p>') +
     '</div>' +
-    /* Yapılmayan görevler */
-    missedPanelCard() +
     /* Hızlı erişim */
     '<div class="grid grid-cols-3 gap-2">' +
       '<button onclick="showView(\'gorev\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-3xl">add_task</span><span class="text-[12px] font-extrabold text-on-surface">Görev Ata</span></button>' +
@@ -1955,6 +1953,27 @@ function weekBars(){
 
 /* ---- Görev Ata ---- */
 let tfSub = 'mat', tfDiff = 'normal', gfSub = 'all', gfStatus = 'active';
+/* Ders seçimi açılır liste olarak (bilgisayarda yana kayan düğmeler görünmüyordu). */
+function subjectSelect(id, current, onchange, opts){
+  opts = opts || {};
+  const counts = opts.counts || null;
+  return '<div class="relative">' +
+    '<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-lg text-primary-container pointer-events-none">' + (current && SUBJECTS[current] ? SUBJECTS[current].icon : 'school') + '</span>' +
+    '<select id="' + id + '" onchange="' + onchange + '" class="inp !pl-10 !pr-9 appearance-none cursor-pointer">' +
+      (opts.allLabel ? '<option value="all"' + (current === 'all' ? ' selected' : '') + '>' + opts.allLabel + (counts ? ' (' + (counts.all || 0) + ')' : '') + '</option>' : '') +
+      Object.keys(SUBJECTS).map(k => '<option value="' + k + '"' + (k === current ? ' selected' : '') + '>' + SUBJECTS[k].name + (counts ? ' (' + (counts[k] || 0) + ')' : '') + '</option>').join('') +
+    '</select>' +
+    '<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant pointer-events-none">expand_more</span>' +
+  '</div>';
+}
+/* Görev Ata ekranını yeniden çizerken formda yazılanları kaybetme. */
+function rerenderGorevKeep(){
+  const ids = ['tf-title','tf-desc','tf-xp','tf-gold','tf-date','tf-time'];
+  const v = {};
+  ids.forEach(i => { const e = $('#' + i); if (e) v[i] = e.value; });
+  renderGorev();
+  ids.forEach(i => { const e = $('#' + i); if (e && v[i] != null) e.value = v[i]; });
+}
 function renderGorev(){
   const bySubject = t => gfSub === 'all' || t.subject === gfSub;
   const active = state.tasks.filter(t => (t.status === 'active' || t.status === 'pending') && bySubject(t)).sort((a,b) => taskDue(a) - taskDue(b));
@@ -1964,30 +1983,28 @@ function renderGorev(){
   const missedForList = state.tasks.filter(t => t.status === 'missed' && bySubject(t)).sort((a,b) => String(b.missedAt || '').localeCompare(String(a.missedAt || '')));
   const allCount = activeCount + completedCount + missedForList.length;
   const t0 = todayStr();
-  const subBtns = Object.keys(SUBJECTS).map(s =>
-    '<button onclick="tfSub=\'' + s + '\';renderGorev()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
-    (tfSub === s ? 'bg-primary-container text-on-primary-container shadow-[0_4px_0_#007139]' : 'bg-surface-container-highest text-on-surface shadow-[0_4px_0_#171b26]') + '">' +
-    '<span class="material-symbols-outlined text-lg">' + SUBJECTS[s].icon + '</span>' + SUBJECTS[s].name + '</button>'
-  ).join('');
-  const filterSubjects = '<button onclick="gfSub=\'all\';renderGorev()" class="shrink-0 px-3 py-2 rounded-full text-[12px] font-extrabold ' + (gfSub === 'all' ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">TÜM DERSLER</button>' + Object.keys(SUBJECTS).map(s => '<button onclick="gfSub=\'' + s + '\';renderGorev()" class="shrink-0 px-3 py-2 rounded-full text-[12px] font-extrabold ' + (gfSub === s ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">' + SUBJECTS[s].name + '</button>').join('');
-  const taskFilters = '<div class="card !p-3 flex flex-col gap-2">' + statusTabs(gfStatus, 'setGfStatus', { active: activeCount, done: completedCount, missed: missedForList.length, all: allCount }) + '<div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">' + filterSubjects + '</div></div>';
+  const subBtns = subjectSelect('tf-sub', tfSub, "tfSub=this.value;this.previousElementSibling.textContent=SUBJECTS[this.value].icon");
+  const subCounts = { all: 0 };
+  state.tasks.forEach(t => { subCounts.all++; subCounts[t.subject] = (subCounts[t.subject] || 0) + 1; });
+  const filterSubjects = subjectSelect('gf-sub', gfSub, 'gfSub=this.value;rerenderGorevKeep()', { allLabel: 'Tüm dersler', counts: subCounts });
+  const taskFilters = '<div class="card !p-3 flex flex-col gap-2">' + statusTabs(gfStatus, 'setGfStatus', { active: activeCount, done: completedCount, missed: missedForList.length, all: allCount }) + '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">filter_list</span>Ders filtresi</label>' + filterSubjects + '</div></div>';
   const allTasks = active.concat(missedForList, completed);
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="card flex flex-col gap-3">' +
       '<h2 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">add_task</span>Yeni Görev (Quest) Oluştur</h2>' +
       '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">title</span>Görev Adı *</label><input id="tf-title" class="inp" placeholder="Örn: Cebirsel İfadeler Testi"></div>' +
       '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">description</span>Açıklama</label><textarea id="tf-desc" class="inp min-h-[70px] resize-none" placeholder="Görev detayları, sayfa aralığı, beklenen çıktı..."></textarea></div>' +
-      '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">school</span>Ders</label><div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">' + subBtns + '</div></div>' +
+      '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">school</span>Ders</label>' + subBtns + '</div>' +
       '<div><label class="lbl"><span class="material-symbols-outlined text-sm text-primary-container">bolt</span>Zorluk & XP</label>' +
         '<div class="grid grid-cols-2 gap-2">' +
           '<button onclick="tfDiff=\'normal\';renderGorev()" class="py-2.5 rounded-lg text-[13px] font-extrabold transition-all ' + (tfDiff === 'normal' ? 'bg-tertiary-container text-on-tertiary-container ring-2 ring-tertiary-fixed-dim' : 'bg-surface-container-highest text-on-surface-variant') + '">⚡ NORMAL (50-250 XP)</button>' +
           '<button onclick="tfDiff=\'boss\';renderGorev()" class="py-2.5 rounded-lg text-[13px] font-extrabold transition-all ' + (tfDiff === 'boss' ? 'bg-error-container text-on-error-container ring-2 ring-secondary-container' : 'bg-surface-container-highest text-on-surface-variant') + '">💀 BOSS (300+ XP)</button>' +
         '</div>' +
-        '<div class="flex items-center gap-2 mt-2"><span class="text-[12px] font-extrabold text-on-surface-variant">XP:</span>' +
-          '<input id="tf-xp" type="number" min="10" max="5000" step="10" value="' + (tfDiff === 'boss' ? 350 : 100) + '" class="inp !w-28">' +
-          '<span class="text-[12px] font-extrabold text-on-surface-variant">🪙</span><input id="tf-gold" type="number" min="0" max="500" step="1" value="' + (tfDiff === 'boss' ? 20 : 5) + '" class="inp !w-20">' +
-          '<input id="tf-date" type="date" value="' + t0 + '" class="inp flex-1">' +
-          '<input id="tf-time" type="time" value="21:00" class="inp !w-24">' +
+        '<div class="grid grid-cols-2 gap-2 mt-2">' +
+          '<div><label class="lbl">XP</label><input id="tf-xp" type="number" min="10" max="5000" step="10" value="' + (tfDiff === 'boss' ? 350 : 100) + '" class="inp"></div>' +
+          '<div><label class="lbl">Altın 🪙</label><input id="tf-gold" type="number" min="0" max="500" step="1" value="' + (tfDiff === 'boss' ? 20 : 5) + '" class="inp"></div>' +
+          '<div><label class="lbl">Teslim tarihi</label><input id="tf-date" type="date" value="' + t0 + '" class="inp"></div>' +
+          '<div><label class="lbl">Saat</label><input id="tf-time" type="time" value="21:00" class="inp"></div>' +
         '</div>' +
       '</div>' +
       '<button onclick="submitTask()" class="btn-orange"><span class="material-symbols-outlined">rocket_launch</span>Görevi Yayınla — ' + esc(state.student.nickname) + '\'nin Ekranına Düşsün!</button>' +
@@ -2275,11 +2292,7 @@ function deleteTask(id){
 /* ---- Planla (Sınav + Program) ---- */
 let efSub = 'mat';
 function renderPlanla(){
-  const subBtns = Object.keys(SUBJECTS).map(s =>
-    '<button onclick="efSub=\'' + s + '\';renderPlanla()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-extrabold transition-all ' +
-    (efSub === s ? 'bg-secondary-container text-on-secondary shadow-[0_4px_0_#572000]' : 'bg-surface-container-highest text-on-surface shadow-[0_4px_0_#171b26]') + '">' +
-    '<span class="material-symbols-outlined text-lg">' + SUBJECTS[s].icon + '</span>' + SUBJECTS[s].name + '</button>'
-  ).join('');
+  const subBtns = subjectSelect('ef-sub', efSub, "efSub=this.value;this.previousElementSibling.textContent=SUBJECTS[this.value].icon");
   const now = new Date();
   const all = state.exams.map(e => ({ ...e, dt: new Date(e.date + 'T' + (e.time || '09:30')) }));
   /* Yaklaşanlar önce (yakından uzağa), sonra geçmişler (yeniden eskiye). */
@@ -2310,7 +2323,7 @@ function renderPlanla(){
     '<section class="card flex flex-col gap-3">' +
       '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">swords</span>Sınav Ekle</h3>' +
       '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Gelecek sınavı planlayabilir ya da geçmiş bir sınavı tarihini seçip notuyla birlikte girebilirsin.</p>' +
-      '<div><label class="lbl">Ders</label><div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">' + subBtns + '</div></div>' +
+      '<div><label class="lbl">Ders</label>' + subBtns + '</div>' +
       '<div><label class="lbl">Sınav / Boss Adı *</label><input id="ef-title" class="inp" placeholder="Örn: Matematik Yazılı Sınavı"></div>' +
       '<div class="grid grid-cols-2 gap-2">' +
         '<div><label class="lbl">Tarih *</label><input id="ef-date" type="date" class="inp" value="' + ymd(addDays(7)) + '"></div>' +
