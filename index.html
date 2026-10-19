@@ -227,14 +227,14 @@ const MONTHS_ABBR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Ek
 const wIdx = d => (new Date(d).getDay() + 6) % 7; // 0=Pzt
 function fmtDateTR(ds){ const d = new Date(ds + 'T00:00:00'); return d.getDate() + ' ' + MONTHS_ABBR[d.getMonth()] + ' ' + WEEK_TR[d.getDay()]; }
 function fmtExamDT(e){ return fmtDateTR(e.date) + ' • ' + (e.time || '09:30'); }
-function taskDue(t){ const time = t.dueTime || '23:59'; return new Date(t.dueDate + 'T' + time); }
+/* Ödevler güne bağlıdır: saat yok, süre teslim gününün sonunda (23:59) dolar. */
+function taskDue(t){ return new Date(t.dueDate + 'T23:59:59'); }
 function fmtDue(t){
-  const due = taskDue(t), now = new Date();
+  const now = new Date();
   const d0 = ymd(now), d1 = ymd(addDays(1));
-  const tm = (t.dueTime || '23:59');
-  if (t.dueDate === d0) return 'Bugün ' + tm;
-  if (t.dueDate === d1) return 'Yarın ' + tm;
-  return fmtDateTR(t.dueDate) + ' ' + tm;
+  if (t.dueDate === d0) return 'Bugün';
+  if (t.dueDate === d1) return 'Yarın';
+  return fmtDateTR(t.dueDate);
 }
 function isOverdue(t){ return (t.status === 'active') && taskDue(t) < new Date(); }
 function leftLabel(dt){
@@ -1745,7 +1745,7 @@ function argoToTask(id){
   const task = { id: uid(), title, desc: String(val('desc', it.descIt || '')).trim(), subject,
     difficulty: it.difficulty === 'boss' ? 'boss' : 'normal',
     xp: Math.max(10, Math.min(5000, parseInt(val('xp', it.xp)) || 100)),
-    createdAt: todayStr(), dueDate, dueTime: '08:00', status: 'active', source: 'argo', argoId: id, activatedAt: new Date().toISOString() };
+    createdAt: todayStr(), dueDate, status: 'active', source: 'argo', argoId: id, activatedAt: new Date().toISOString() };
   task.gold = taskGold(task);
   return task;
 }
@@ -1891,7 +1891,7 @@ function tasksPdfHtml(tasks){
   const row = t => {
     const late = t.status === 'active' && isOverdue(t);
     const d = new Date(t.dueDate + 'T00:00:00');
-    const when = (late ? d.getDate() + ' ' + MONTHS_ABBR[d.getMonth()] + ' ' : '') + (t.dueTime || '23:59');
+    const when = late ? d.getDate() + ' ' + MONTHS_ABBR[d.getMonth()] : '';
     const st = t.status === 'pending' ? ' • <span style="color:#0b6b8a;font-weight:800">Onay bekliyor</span>' : '';
     return '<tr data-row="1" style="border-top:1px solid #e3e6ea">' +
       '<td style="width:1.5em;padding:.4em .3em;vertical-align:top"><div style="width:.95em;height:.95em;border:1.5px solid #333;border-radius:2px;margin-top:.12em"></div></td>' +
@@ -2077,7 +2077,7 @@ function subjectSelect(id, current, onchange, opts){
 }
 /* Görev Ata ekranını yeniden çizerken formda yazılanları kaybetme. */
 function rerenderGorevKeep(){
-  const ids = ['tf-title','tf-desc','tf-xp','tf-gold','tf-date','tf-time'];
+  const ids = ['tf-title','tf-desc','tf-xp','tf-gold','tf-date'];
   const v = {};
   ids.forEach(i => { const e = $('#' + i); if (e) v[i] = e.value; });
   renderGorev();
@@ -2112,8 +2112,7 @@ function renderGorev(){
         '<div class="grid grid-cols-2 gap-2 mt-2">' +
           '<div><label class="lbl">XP</label><input id="tf-xp" type="number" min="10" max="5000" step="10" value="' + (tfDiff === 'boss' ? 350 : 100) + '" class="inp"></div>' +
           '<div><label class="lbl">Altın 🪙</label><input id="tf-gold" type="number" min="0" max="500" step="1" value="' + (tfDiff === 'boss' ? 20 : 5) + '" class="inp"></div>' +
-          '<div><label class="lbl">Teslim tarihi</label><input id="tf-date" type="date" value="' + t0 + '" class="inp"></div>' +
-          '<div><label class="lbl">Saat</label><input id="tf-time" type="time" value="21:00" class="inp"></div>' +
+          '<div class="col-span-2"><label class="lbl">Teslim günü</label><input id="tf-date" type="date" value="' + t0 + '" class="inp"></div>' +
         '</div>' +
       '</div>' +
       '<button onclick="submitTask()" class="btn-orange"><span class="material-symbols-outlined">rocket_launch</span>Görevi Yayınla — ' + esc(state.student.nickname) + '\'nin Ekranına Düşsün!</button>' +
@@ -2150,8 +2149,7 @@ function submitTask(){
   const xp = Math.max(10, Math.min(5000, parseInt($('#tf-xp').value) || 100));
   const gold = Math.max(0, Math.min(500, parseInt($('#tf-gold').value) || 0));
   const date = $('#tf-date').value || todayStr();
-  const time = $('#tf-time').value || '21:00';
-  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, gold, createdAt: todayStr(), dueDate: date, dueTime: time, status: 'active', activatedAt: new Date().toISOString() });
+  state.tasks.push({ id: uid(), title, desc, subject: tfSub, difficulty: tfDiff, xp, gold, createdAt: todayStr(), dueDate: date, status: 'active', activatedAt: new Date().toISOString() });
   save(); renderGorev();
   toast('⚔️ Görev yayınlandı! ' + (state.student.nickname || '') + ' ekranında görünecek.');
   beep(true);
@@ -2310,7 +2308,7 @@ function bulkAdd(){
   if (sel.some(r => !r.title.trim() || !r.date)) { toast('⚠️ Başlığı ya da tarihi boş görev var'); return; }
   sel.forEach(r => {
     const task = { id: uid(), title: r.title.trim(), desc: r.desc, subject: r.subject, difficulty: r.difficulty,
-      xp: Math.max(10, Math.min(5000, Number(r.xp) || 100)), createdAt: todayStr(), dueDate: r.date, dueTime: '08:00', status: 'active', activatedAt: new Date().toISOString() };
+      xp: Math.max(10, Math.min(5000, Number(r.xp) || 100)), createdAt: todayStr(), dueDate: r.date, status: 'active', activatedAt: new Date().toISOString() };
     task.gold = taskGold(task);
     state.tasks.push(task);
   });
@@ -2355,12 +2353,9 @@ function editTaskAll(id){
   if (title === null) return;
   const desc = prompt('Görev açıklaması:', t.desc || '');
   if (desc === null) return;
-  const date = prompt('Teslim tarihi (YYYY-AA-GG):', t.dueDate || todayStr());
+  const date = prompt('Teslim günü (YYYY-AA-GG):', t.dueDate || todayStr());
   if (date === null) return;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(date + 'T00:00:00').getTime())) { toast('Tarih formatı geçersiz. Örnek: 2026-10-06'); return; }
-  const time = prompt('Teslim saati (SS:DD):', t.dueTime || '21:00');
-  if (time === null) return;
-  if (!/^\d{2}:\d{2}$/.test(time)) { toast('Saat formatı geçersiz. Örnek: 21:00'); return; }
   const xpRaw = prompt('XP ödülü:', String(t.xp));
   if (xpRaw === null) return;
   const goldRaw = prompt('Altın ödülü:', String(oldGold));
@@ -2371,7 +2366,6 @@ function editTaskAll(id){
   t.title = title.trim() || t.title;
   t.desc = desc.trim();
   t.dueDate = date;
-  t.dueTime = time;
   t.xp = Math.round(xp);
   t.gold = Math.round(gold);
   if (wasCompleted) {
@@ -2886,18 +2880,17 @@ function reactivateTask(id){
       '<h3 class="text-[17px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">restart_alt</span>Yeniden Aktifleştir</h3>' +
       '<p class="text-[13px] font-semibold text-on-surface">' + esc(t.title) + '</p>' +
       '<p class="text-[12px] font-semibold text-on-surface-variant">' + (t.penaltyXp ? nf(t.penaltyXp) + ' XP ceza geri alınır. ' : '') + 'Görev ' + esc(state.student.nickname || '') + '\'un listesine yeni teslim tarihiyle döner.</p>' +
-      '<div class="grid grid-cols-2 gap-2"><div><label class="lbl">Yeni tarih</label><input id="ra-date" type="date" class="inp" value="' + def + '" min="' + todayStr() + '"></div>' +
-      '<div><label class="lbl">Saat</label><input id="ra-time" type="time" class="inp" value="' + esc(t.dueTime || '08:00') + '"></div></div>' +
+      '<div><label class="lbl">Yeni teslim günü</label><input id="ra-date" type="date" class="inp" value="' + def + '" min="' + todayStr() + '"></div>' +
       '<button onclick="confirmReactivate(\'' + t.id + '\')" class="btn-green"><span class="material-symbols-outlined">restart_alt</span>Aktifleştir</button>' +
       '<button onclick="closeDetail()" class="btn-ghost">Vazgeç</button>' +
     '</div>');
 }
 function confirmReactivate(id){
   const t = state.tasks.find(x => x.id === id); if (!t || t.status !== 'missed') return;
-  const date = $('#ra-date').value, time = $('#ra-time').value || t.dueTime || '08:00';
-  if (!date || new Date(date + 'T' + time) <= new Date()) { toast('⚠️ Gelecekte bir tarih ve saat seç'); return; }
+  const date = $('#ra-date').value;
+  if (!date || date < todayStr()) { toast('⚠️ Bugün ya da sonraki bir gün seç'); return; }
   revertPenalty(t);
-  t.status = 'active'; t.dueDate = date; t.dueTime = time; t.activatedAt = new Date().toISOString();
+  t.status = 'active'; t.dueDate = date; t.activatedAt = new Date().toISOString();
   recalcStreak(); save(); closeDetail(); renderAll();
   toast('🔄 Görev yeniden aktif • ' + fmtDue(t));
 }
