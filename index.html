@@ -1947,13 +1947,16 @@ async function exportOpenTasksPdf(){
     }
   }
   const file = 'devam-eden-odevler-' + todayStr() + '.pdf';
+  /* Sayfa aşağı kaydırılmışken html2canvas kaydırma kadar boşluk bırakıyordu: çizim için en üste al, sonra geri dön. */
+  const keepX = window.scrollX, keepY = window.scrollY;
   try {
+    window.scrollTo(0, 0);
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
     page.style.height = '1100px'; page.style.overflow = 'hidden';
     await window.html2pdf().set({
       margin: 0, filename: file,
       image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 794 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all'] }
     }).from(page).save();
@@ -1967,6 +1970,7 @@ async function exportOpenTasksPdf(){
     } else toast('PDF oluşturulamadı — internet bağlantısını kontrol et');
   } finally {
     host.remove();
+    window.scrollTo(keepX, keepY);
   }
 }
 function renderPanel(){
