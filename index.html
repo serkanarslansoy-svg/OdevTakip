@@ -1212,7 +1212,6 @@ function renderDersler(){
     '</div>' +
     '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-gutter px-gutter">' + chips + '</div>' +
     statusTabs(derTab, 'setDerTab', { active: activeCount, done: doneCountAll, missed: missedCountAll, all: activeCount + doneCountAll + missedCountAll }) +
-    '<button onclick="exportOpenTasksPdf()" class="self-end -mt-1 flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface text-[12px] font-extrabold"><span class="material-symbols-outlined text-base text-error">picture_as_pdf</span>Devam eden ödevleri PDF al</button>' +
     '<div class="flex flex-col gap-2.5">' +
       (showList.length ? showList.map(t => taskCard(t)).join('')
         : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : derTab === 'done' ? 'Tamamlanan görev yok' : derTab === 'missed' ? 'Yapılmayan görev yok 🎉' : 'Görev bulunamadı') + '</p></div>') +
@@ -1923,6 +1922,7 @@ function tasksPdfHtml(tasks){
   '</div>';
 }
 async function exportOpenTasksPdf(){
+  if (ui.role !== 'parent') return; // PDF yalnızca veli modunda
   const tasks = openTasksForPdf();
   if (!tasks.length) { toast('Devam eden ödev yok 🎉'); return; }
   toast('📄 PDF hazırlanıyor…');
