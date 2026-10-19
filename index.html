@@ -1212,7 +1212,7 @@ function renderDersler(){
     '</div>' +
     '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-gutter px-gutter">' + chips + '</div>' +
     statusTabs(derTab, 'setDerTab', { active: activeCount, done: doneCountAll, missed: missedCountAll, all: activeCount + doneCountAll + missedCountAll }) +
-    '<button onclick="exportOpenTasksPdf()" class="self-end -mt-1 flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface text-[12px] font-extrabold"><span class="material-symbols-outlined text-base text-error">picture_as_pdf</span>Açık ödevleri PDF al</button>' +
+    '<button onclick="exportOpenTasksPdf()" class="self-end -mt-1 flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface text-[12px] font-extrabold"><span class="material-symbols-outlined text-base text-error">picture_as_pdf</span>Devam eden ödevleri PDF al</button>' +
     '<div class="flex flex-col gap-2.5">' +
       (showList.length ? showList.map(t => taskCard(t)).join('')
         : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : derTab === 'done' ? 'Tamamlanan görev yok' : derTab === 'missed' ? 'Yapılmayan görev yok 🎉' : 'Görev bulunamadı') + '</p></div>') +
@@ -1861,7 +1861,7 @@ function statsCard(){
       (v.done ? '<span class="' + (v.correct >= 8 ? 'text-primary-container' : 'text-secondary') + '">' + v.correct + '/10' + (v.xp ? ' • +' + v.xp + ' XP' : '') + '</span>' : v.idx ? 'yarıda (' + v.idx + '/10)' : 'henüz oynanmadı') + '</p>'; })() +
   '</div>';
 }
-/* ---- Açık ödevler: tek sayfalık A4 PDF ---- */
+/* ---- Devam eden ödevler: tek sayfalık A4 PDF ---- */
 function loadScriptOnce(src){
   loadScriptOnce.p = loadScriptOnce.p || {};
   if (!loadScriptOnce.p[src]) loadScriptOnce.p[src] = new Promise((res, rej) => {
@@ -1870,8 +1870,9 @@ function loadScriptOnce(src){
   });
   return loadScriptOnce.p[src];
 }
+/* PDF'e yalnızca devam eden ödevler girer: süresi geçmemiş, henüz bitirilip gönderilmemiş olanlar. */
 function openTasksForPdf(){
-  return state.tasks.filter(t => t.status === 'active' || t.status === 'pending').sort((a, b) => taskDue(a) - taskDue(b));
+  return state.tasks.filter(t => t.status === 'active' && !isOverdue(t)).sort((a, b) => taskDue(a) - taskDue(b));
 }
 function tasksPdfHtml(tasks){
   const now = new Date();
@@ -1903,9 +1904,9 @@ function tasksPdfHtml(tasks){
   };
   return '<div style="width:794px;min-height:1100px;box-sizing:border-box;padding:46px 50px;background:#fff;color:#111;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;font-size:12px;line-height:1.35">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #00a85a;padding-bottom:.6em;margin-bottom:.9em">' +
-      '<div><div style="font-size:1.9em;font-weight:800">🏹 ' + esc(state.student.name || 'Öğrenci') + ' — Açık Ödevler</div>' +
+      '<div><div style="font-size:1.9em;font-weight:800">🏹 ' + esc(state.student.name || 'Öğrenci') + ' — Devam Eden Ödevler</div>' +
       '<div style="color:#555;font-weight:600">' + esc(state.student.grade || '') + ' • ' + dateLong + '</div></div>' +
-      '<div style="text-align:right"><div style="font-size:1.9em;font-weight:800;color:#00a85a">' + tasks.length + '</div><div style="color:#555;font-weight:700">açık ödev</div></div>' +
+      '<div style="text-align:right"><div style="font-size:1.9em;font-weight:800;color:#00a85a">' + tasks.length + '</div><div style="color:#555;font-weight:700">ödev</div></div>' +
     '</div>' +
     groups.map(g =>
       '<div data-group="1" style="margin-bottom:.8em;break-inside:avoid">' +
@@ -1923,7 +1924,7 @@ function tasksPdfHtml(tasks){
 }
 async function exportOpenTasksPdf(){
   const tasks = openTasksForPdf();
-  if (!tasks.length) { toast('Açık ödev yok 🎉'); return; }
+  if (!tasks.length) { toast('Devam eden ödev yok 🎉'); return; }
   toast('📄 PDF hazırlanıyor…');
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;';
@@ -1933,7 +1934,7 @@ async function exportOpenTasksPdf(){
   /* Tek sayfaya sığdır: önce yazıyı küçült, yetmezse açıklamaları gizle, o da yetmezse son satırları özetle */
   const fits = () => page.scrollHeight <= 1100;
   const shrink = (start, min) => { let fs = start; page.style.fontSize = fs + 'px'; while (!fits() && fs > min) { fs -= 0.5; page.style.fontSize = fs + 'px'; } };
-  shrink(12, 8);
+  shrink(13.5, 8);
   if (!fits()) { page.querySelectorAll('[data-desc]').forEach(e => e.remove()); shrink(11, 7); }
   if (!fits()) {
     const more = page.querySelector('[data-more]'); more.style.display = 'block';
@@ -1945,7 +1946,7 @@ async function exportOpenTasksPdf(){
       page.querySelectorAll('[data-group]').forEach(g => { if (!g.querySelector('tr')) g.remove(); });
     }
   }
-  const file = 'acik-odevler-' + todayStr() + '.pdf';
+  const file = 'devam-eden-odevler-' + todayStr() + '.pdf';
   try {
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
     page.style.height = '1100px'; page.style.overflow = 'hidden';
@@ -2035,7 +2036,7 @@ function renderPanel(){
       '<button onclick="showView(\'gorev\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-3xl">add_task</span><span class="text-[12px] font-extrabold text-on-surface">Görev Ata</span></button>' +
       '<button onclick="showView(\'planla\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-tertiary-fixed-dim text-3xl">swords</span><span class="text-[12px] font-extrabold text-on-surface">Sınav Planla</span></button>' +
       '<button onclick="showView(\'odulmgr\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-3xl">redeem</span><span class="text-[12px] font-extrabold text-on-surface">Ödüller</span></button>' +
-      '<button onclick="exportOpenTasksPdf()" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-error text-3xl">picture_as_pdf</span><span class="text-[12px] font-extrabold text-on-surface">Açık Ödevler PDF</span></button>' +
+      '<button onclick="exportOpenTasksPdf()" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-error text-3xl">picture_as_pdf</span><span class="text-[12px] font-extrabold text-on-surface">Devam Eden Ödevler PDF</span></button>' +
     '</div>' +
     /* Durum özeti */
     '<div class="card"><h4 class="text-[14px] font-bold text-on-surface mb-2 flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-lg">monitoring</span>Son 7 Gün Özeti</h4>' +
