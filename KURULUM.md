@@ -39,6 +39,7 @@ Sağ üstteki **Ruz / Veli** düğmeleriyle geçiş yapılır.
 - **Görev Ata:** Görev oluştur; **Toplu Ödev Ekle** ile öğretmen mesajını/Classroom listesini yapıştırıp tek seferde çok görev ekle (ders, zorluk BOSS/NORMAL, XP, son tarih) → anında Ruz'un ekranına düşer
 - **Planla:** Sınav tanımla ya da geçmiş tarihli sınavı notuyla birlikte gir (not girişi yalnızca velide) (Boss seçimi ve alarm günü ayarlanır), geçmiş sınavın notunu gir/düzenle + haftalık ders programını yönet
 - **Ödül:** Mağazaya ödül ekle, takas taleplerini onayla/reddet
+- **Açık Ödevler PDF:** Panel'deki (ya da öğrencinin Dersler ekranındaki) düğme, açık ve onay bekleyen ödevleri teslim gününe göre gruplayıp tek sayfalık A4 PDF olarak indirir; 14 gün içindeki sınavlar da altta listelenir.
 - **Ayarlar:** PIN değiştir, bildirim izni, **Firebase senkron**, **Aile Hesabı** girişi, yedek al/geri yükle, sıfırla
 
 ---

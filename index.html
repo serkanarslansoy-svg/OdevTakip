@@ -1212,6 +1212,7 @@ function renderDersler(){
     '</div>' +
     '<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-gutter px-gutter">' + chips + '</div>' +
     statusTabs(derTab, 'setDerTab', { active: activeCount, done: doneCountAll, missed: missedCountAll, all: activeCount + doneCountAll + missedCountAll }) +
+    '<button onclick="exportOpenTasksPdf()" class="self-end -mt-1 flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface text-[12px] font-extrabold"><span class="material-symbols-outlined text-base text-error">picture_as_pdf</span>Açık ödevleri PDF al</button>' +
     '<div class="flex flex-col gap-2.5">' +
       (showList.length ? showList.map(t => taskCard(t)).join('')
         : '<div class="card py-8 flex flex-col items-center gap-2 text-center"><span class="material-symbols-outlined text-4xl text-outline-variant">inventory_2</span><p class="text-[14px] font-bold text-on-surface">' + (derTab === 'active' ? 'Devam eden görev yok' : derTab === 'done' ? 'Tamamlanan görev yok' : derTab === 'missed' ? 'Yapılmayan görev yok 🎉' : 'Görev bulunamadı') + '</p></div>') +
@@ -1860,6 +1861,113 @@ function statsCard(){
       (v.done ? '<span class="' + (v.correct >= 8 ? 'text-primary-container' : 'text-secondary') + '">' + v.correct + '/10' + (v.xp ? ' • +' + v.xp + ' XP' : '') + '</span>' : v.idx ? 'yarıda (' + v.idx + '/10)' : 'henüz oynanmadı') + '</p>'; })() +
   '</div>';
 }
+/* ---- Açık ödevler: tek sayfalık A4 PDF ---- */
+function loadScriptOnce(src){
+  loadScriptOnce.p = loadScriptOnce.p || {};
+  if (!loadScriptOnce.p[src]) loadScriptOnce.p[src] = new Promise((res, rej) => {
+    const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => { delete loadScriptOnce.p[src]; rej(new Error('load')); };
+    document.head.appendChild(el);
+  });
+  return loadScriptOnce.p[src];
+}
+function openTasksForPdf(){
+  return state.tasks.filter(t => t.status === 'active' || t.status === 'pending').sort((a, b) => taskDue(a) - taskDue(b));
+}
+function tasksPdfHtml(tasks){
+  const now = new Date();
+  const dateLong = now.getDate() + ' ' + MONTHS_TR[now.getMonth()] + ' ' + now.getFullYear() + ', ' + WEEK_TR[now.getDay()];
+  const groups = [];
+  tasks.forEach(t => {
+    const key = (t.status === 'active' && isOverdue(t)) ? 'late' : t.dueDate;
+    let g = groups.find(x => x.key === key);
+    if (!g) groups.push(g = { key, items: [] });
+    g.items.push(t);
+  });
+  groups.sort((a, b) => (a.key === 'late' ? '' : a.key).localeCompare(b.key === 'late' ? '' : b.key));
+  const today = todayStr(), tomorrow = ymd(addDays(1));
+  const head = k => k === 'late' ? '⚠ Gecikmiş' : (k === today ? 'Bugün — ' : k === tomorrow ? 'Yarın — ' : '') + fmtDateTR(k);
+  const short = (x, n) => { x = String(x || '').replace(/\s+/g, ' ').trim(); return x.length > n ? x.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : x; };
+  const exams = state.exams.filter(e => e.date >= today && e.date <= ymd(addDays(14))).sort((a, b) => a.date.localeCompare(b.date));
+  const row = t => {
+    const late = t.status === 'active' && isOverdue(t);
+    const d = new Date(t.dueDate + 'T00:00:00');
+    const when = (late ? d.getDate() + ' ' + MONTHS_ABBR[d.getMonth()] + ' ' : '') + (t.dueTime || '23:59');
+    const st = t.status === 'pending' ? ' • <span style="color:#0b6b8a;font-weight:800">Onay bekliyor</span>' : '';
+    return '<tr data-row="1" style="border-top:1px solid #e3e6ea">' +
+      '<td style="width:1.5em;padding:.4em .3em;vertical-align:top"><div style="width:.95em;height:.95em;border:1.5px solid #333;border-radius:2px;margin-top:.12em"></div></td>' +
+      '<td style="width:7.2em;padding:.4em .3em;vertical-align:top;font-weight:800;color:#1f5f3a">' + esc((SUBJECTS[t.subject] || {}).name || t.subject || '') + '</td>' +
+      '<td style="padding:.4em .3em;vertical-align:top"><div style="font-weight:800">' + esc(t.title) + (t.difficulty === 'boss' ? ' <span style="color:#c25100">• BOSS</span>' : '') + '</div>' +
+        (t.desc ? '<div data-desc="1" style="color:#555;font-size:.85em;margin-top:.1em">' + esc(short(t.desc, 170)) + '</div>' : '') + '</td>' +
+      '<td style="padding:.4em .3em;vertical-align:top;text-align:right;white-space:nowrap;font-size:.9em;color:' + (late ? '#b3261e' : '#444') + ';font-weight:700">' + esc(when) + st + ' <span style="color:#888;font-weight:600">+' + t.xp + ' XP</span></td>' +
+    '</tr>';
+  };
+  return '<div style="width:794px;min-height:1100px;box-sizing:border-box;padding:46px 50px;background:#fff;color:#111;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;font-size:12px;line-height:1.35">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #00a85a;padding-bottom:.6em;margin-bottom:.9em">' +
+      '<div><div style="font-size:1.9em;font-weight:800">🏹 ' + esc(state.student.name || 'Öğrenci') + ' — Açık Ödevler</div>' +
+      '<div style="color:#555;font-weight:600">' + esc(state.student.grade || '') + ' • ' + dateLong + '</div></div>' +
+      '<div style="text-align:right"><div style="font-size:1.9em;font-weight:800;color:#00a85a">' + tasks.length + '</div><div style="color:#555;font-weight:700">açık ödev</div></div>' +
+    '</div>' +
+    groups.map(g =>
+      '<div data-group="1" style="margin-bottom:.8em;break-inside:avoid">' +
+        '<div style="font-weight:800;font-size:1.1em;padding:.25em .5em;border-radius:5px;background:' + (g.key === 'late' ? '#fde7e5;color:#b3261e' : '#eef7f1;color:#14532d') + '">' + head(g.key) + ' <span style="font-weight:600;color:#666">(' + g.items.length + ')</span></div>' +
+        '<table style="width:100%;border-collapse:collapse">' + g.items.map(row).join('') + '</table>' +
+      '</div>'
+    ).join('') +
+    (exams.length ? '<div style="margin-top:.6em;padding:.6em .8em;border:1.5px solid #f0a35e;border-radius:8px;background:#fff6ee">' +
+      '<div style="font-weight:800;color:#c25100;margin-bottom:.3em">🔥 Yaklaşan Sınavlar (14 gün)</div>' +
+      exams.map(e => '<div>• <b>' + esc(fmtDateTR(e.date)) + ' ' + esc(e.time || '') + '</b> — ' + esc(e.title) + (e.note ? ' <span style="color:#666">(' + esc(short(e.note, 80)) + ')</span>' : '') + '</div>').join('') +
+    '</div>' : '') +
+    '<div data-more="1" style="display:none;margin:.4em 0;font-weight:800;color:#b3261e;text-align:center"></div>' +
+    '<div style="margin-top:1em;color:#999;font-size:.8em;text-align:center">Ödev Avcısı • ' + dateLong + '</div>' +
+  '</div>';
+}
+async function exportOpenTasksPdf(){
+  const tasks = openTasksForPdf();
+  if (!tasks.length) { toast('Açık ödev yok 🎉'); return; }
+  toast('📄 PDF hazırlanıyor…');
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;';
+  host.innerHTML = tasksPdfHtml(tasks);
+  document.body.appendChild(host);
+  const page = host.firstElementChild;
+  /* Tek sayfaya sığdır: önce yazıyı küçült, yetmezse açıklamaları gizle, o da yetmezse son satırları özetle */
+  const fits = () => page.scrollHeight <= 1100;
+  const shrink = (start, min) => { let fs = start; page.style.fontSize = fs + 'px'; while (!fits() && fs > min) { fs -= 0.5; page.style.fontSize = fs + 'px'; } };
+  shrink(12, 8);
+  if (!fits()) { page.querySelectorAll('[data-desc]').forEach(e => e.remove()); shrink(11, 7); }
+  if (!fits()) {
+    const more = page.querySelector('[data-more]'); more.style.display = 'block';
+    const rows = [...page.querySelectorAll('tr[data-row]')];
+    let hidden = 0;
+    while (!fits() && rows.length > 1) {
+      rows.pop().remove(); hidden++;
+      more.textContent = '… ve ' + hidden + ' ödev daha (tam liste uygulamada)';
+      page.querySelectorAll('[data-group]').forEach(g => { if (!g.querySelector('tr')) g.remove(); });
+    }
+  }
+  const file = 'acik-odevler-' + todayStr() + '.pdf';
+  try {
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+    page.style.height = '1100px'; page.style.overflow = 'hidden';
+    await window.html2pdf().set({
+      margin: 0, filename: file,
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all'] }
+    }).from(page).save();
+    toast('✅ PDF indirildi: ' + file);
+  } catch (e) {
+    /* Kütüphane yüklenemezse yazdırma penceresi: "PDF olarak kaydet" seçilebilir */
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + file + '</title><style>@page{size:A4;margin:0}body{margin:0}</style></head><body>' + page.outerHTML + '</body></html>');
+      w.document.close(); setTimeout(() => w.print(), 400);
+    } else toast('PDF oluşturulamadı — internet bağlantısını kontrol et');
+  } finally {
+    host.remove();
+  }
+}
 function renderPanel(){
   const pt = pendingTasks(), pr = pendingRedemptions();
   const activeCount = state.tasks.filter(t => t.status === 'active').length;
@@ -1923,10 +2031,11 @@ function renderPanel(){
         : '<p class="text-[13px] font-semibold text-on-surface-variant">Bekleyen onay yok. ' + esc(state.student.nickname) + ' görev tamamladığında burada görünecek.</p>') +
     '</div>' +
     /* Hızlı erişim */
-    '<div class="grid grid-cols-3 gap-2">' +
+    '<div class="grid grid-cols-2 gap-2">' +
       '<button onclick="showView(\'gorev\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-secondary-container text-3xl">add_task</span><span class="text-[12px] font-extrabold text-on-surface">Görev Ata</span></button>' +
       '<button onclick="showView(\'planla\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-tertiary-fixed-dim text-3xl">swords</span><span class="text-[12px] font-extrabold text-on-surface">Sınav Planla</span></button>' +
       '<button onclick="showView(\'odulmgr\')" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-3xl">redeem</span><span class="text-[12px] font-extrabold text-on-surface">Ödüller</span></button>' +
+      '<button onclick="exportOpenTasksPdf()" class="card !p-3 flex flex-col items-center gap-1.5"><span class="material-symbols-outlined text-error text-3xl">picture_as_pdf</span><span class="text-[12px] font-extrabold text-on-surface">Açık Ödevler PDF</span></button>' +
     '</div>' +
     /* Durum özeti */
     '<div class="card"><h4 class="text-[14px] font-bold text-on-surface mb-2 flex items-center gap-1.5"><span class="material-symbols-outlined text-primary-container text-lg">monitoring</span>Son 7 Gün Özeti</h4>' +
