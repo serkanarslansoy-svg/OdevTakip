@@ -116,7 +116,8 @@ listesine düşer. Ruz'un ekranına sen
 onayladıktan sonra geçer. Onaylarken başlığı, açıklamayı, dersi, tarihi ve XP'yi düzeltebilirsin;
 "Gerek Yok" dediğin ödev bir daha gelmez.
 
-**Promemoria (öğretmen hatırlatmaları)** da aynı listeye 📌 etiketiyle düşer. Argo'da
+**Promemoria (öğretmen hatırlatmaları)** aynı kartta ayrı bir **📌 Promemoria** sekmesine düşer
+(ödevler **Ödevler** sekmesinde kalır; "Hepsini Onayla" yalnızca açık sekmeye uygulanır). Argo'da
 promemoria'nın ders alanı yoktur; ders, metinden ya da öğretmenin derslerinden çıkarılır
 (öğretmen birden fazla ders veriyorsa boş bırakılır, sen seçersin). Onaylarken türünü seç:
 - **🎯 Sınav olarak ekle** → Sınavlar'a Boss sınavı olarak girer (2 gün önce alarm).

@@ -1717,25 +1717,38 @@ function argoTitle(it){
   const body = short.charAt(0).toUpperCase() + short.slice(1);
   return SUBJECTS[it.subject] ? SUBJECTS[it.subject].name + ': ' + body : body;
 }
+/* Panelde Argo kartı iki sekmeli: Ödevler | Promemoria. */
+let argoTab = null;
+function setArgoTab(v){ argoTab = v; renderPanel(); }
 function argoInboxCard(){
-  const items = argoItems();
-  if (!items.length) return '';
-  const hasProm = items.some(argoIsProm);
+  const all = argoItems();
+  if (!all.length) return '';
+  const odev = all.filter(x => !argoIsProm(x)), prom = all.filter(argoIsProm);
+  const tab = argoTab || (odev.length ? 'odev' : 'prom');
+  const items = tab === 'prom' ? prom : odev;
+  const tabBtn = (id, label, icon, n, on) => '<button onclick="setArgoTab(\'' + id + '\')" class="flex items-center justify-center gap-1.5 h-10 rounded-xl text-[13px] font-extrabold whitespace-nowrap transition-all ' +
+    (tab === id ? on + ' shadow-[0_3px_0_#070a11]' : 'text-on-surface-variant') + '"><span class="material-symbols-outlined text-[17px]">' + icon + '</span>' + label +
+    '<span class="min-w-[20px] px-1.5 rounded-full bg-black/25 text-[11px] leading-5">' + n + '</span></button>';
   const opts = cur => '<option value=""' + (cur ? '' : ' selected') + '>— Ders seç —</option>' + Object.keys(SUBJECTS).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SUBJECTS[k].name + '</option>').join('');
   return '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md ring-1 ring-tertiary-fixed-dim/40">' +
     '<div class="flex items-center justify-between gap-2">' +
       '<span class="text-[18px] font-bold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo\'dan Gelenler</span>' +
-      '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[12px] font-extrabold">' + items.length + '</span>' +
+      '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[12px] font-extrabold">' + all.length + '</span>' +
     '</div>' +
-    '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Okulun Argo sisteminden otomatik çekildi, ders eşlendi. Kontrol et, onayladıkların ' + esc(state.student.nickname) + '\'un ekranına düşer.' +
-      (hasProm ? ' <b class="text-secondary">📌 Promemoria</b> kayıtlarını Sınav ya da Görev olarak ekleyebilirsin.' : '') + '</p>' +
+    '<div class="grid grid-cols-2 gap-1 p-1 bg-surface-container-lowest rounded-2xl shadow-[inset_0_2px_5px_rgba(0,0,0,0.6)]">' +
+      tabBtn('odev', 'Ödevler', 'menu_book', odev.length, 'bg-tertiary-fixed-dim text-on-tertiary-fixed') +
+      tabBtn('prom', 'Promemoria', 'push_pin', prom.length, 'bg-secondary-container text-on-secondary') +
+    '</div>' +
+    '<p class="text-[12px] font-semibold text-on-surface-variant">' + (tab === 'prom'
+      ? 'Öğretmenlerin Argo\'daki hatırlatmaları. Her birini <b class="text-secondary">Sınav</b> ya da <b class="text-secondary">Görev</b> olarak ekle; gerekmeyenleri kaldır.'
+      : 'Okulun Argo sisteminden otomatik çekildi, ders eşlendi. Kontrol et, onayladıkların ' + esc(state.student.nickname) + '\'un ekranına düşer.') + '</p>' +
+    (items.length ? '' : '<p class="text-[13px] font-semibold text-on-surface-variant text-center py-3">' + (tab === 'prom' ? 'Bekleyen promemoria yok.' : 'Bekleyen ödev yok.') + '</p>') +
     items.map(it => {
       const prom = argoIsProm(it);
       const kind = prom && it.suggest === 'exam' ? 'exam' : 'task';
       return '<div class="rounded-lg bg-surface-container-lowest p-3 flex flex-col gap-2' + (prom ? ' ring-1 ring-secondary-container/40' : '') + '">' +
-        (prom ? '<div class="flex items-center justify-between gap-2">' +
-          '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold shrink-0"><span class="material-symbols-outlined text-sm">push_pin</span>Promemoria</span>' +
-          '<select id="ai-kind-' + it.id + '" onchange="argoKindToggle(\'' + it.id + '\',this.value)" class="inp !w-auto !py-1 !text-[12px] font-bold">' +
+        (prom ? '<div>' +
+          '<select id="ai-kind-' + it.id + '" onchange="argoKindToggle(\'' + it.id + '\',this.value)" class="inp !py-1.5 !text-[12px] font-bold">' +
             '<option value="exam"' + (kind === 'exam' ? ' selected' : '') + '>🎯 Sınav olarak ekle</option>' +
             '<option value="task"' + (kind === 'task' ? ' selected' : '') + '>⚔️ Görev olarak ekle</option>' +
           '</select></div>' : '') +
@@ -1754,7 +1767,7 @@ function argoInboxCard(){
         '</div>' +
       '</div>';
     }).join('') +
-    (items.length > 1 ? '<button onclick="approveAllArgo()" class="btn-orange"><span class="material-symbols-outlined">done_all</span>Hepsini Onayla (' + items.length + ')</button>' : '') +
+    (items.length > 1 ? '<button onclick="approveAllArgo(\'' + tab + '\')" class="btn-orange"><span class="material-symbols-outlined">done_all</span>Hepsini Onayla (' + items.length + ')</button>' : '') +
   '</div>';
 }
 /* Ders seçilince başlık hâlâ otomatikse ders önekini güncelle (ör. "Interrogazione" → "İtalyanca: Interrogazione"). */
@@ -1811,9 +1824,9 @@ function approveArgo(id){
   save(); renderAll();
   toast('⚔️ Görev ' + (state.student.nickname || '') + '\'un ekranına gönderildi');
 }
-function approveAllArgo(){
+function approveAllArgo(tab){
   if (ui.role !== 'parent') return;
-  const ids = argoItems().map(x => x.id);
+  const ids = argoItems().filter(x => tab === 'prom' ? argoIsProm(x) : tab === 'odev' ? !argoIsProm(x) : true).map(x => x.id);
   const tasks = [], exams = [];
   for (const id of ids) {
     if (argoKindOf(id) === 'exam') { const e = argoToExam(id); if (!e) return; exams.push(e); }
@@ -2752,7 +2765,7 @@ function renderAyarlar(){
     '<section class="card flex flex-col gap-3">' +
       '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo Otomatik Ödev</h3>' +
       '<div class="bg-surface-container-lowest rounded-lg p-3 text-[13px] font-bold text-on-surface">Son çalışma: ' + argoStatusHtml() + '</div>' +
-      '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler ve <b>promemoria</b> (öğretmen hatırlatmaları) günde 4 kez otomatik çekilir, dersi eşlenir ve Panelde <b>Argo\'dan Gelenler</b> listesine düşer. Promemoria\'yı onaylarken Sınav ya da Görev olarak ekleyebilirsin; verifica / interrogazione otomatik Sınav önerilir.</p>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler ve <b>promemoria</b> (öğretmen hatırlatmaları) günde 4 kez otomatik çekilir, dersi eşlenir ve Panelde <b>Argo\'dan Gelenler</b> kartına düşer: ödevler <b>Ödevler</b>, promemoria <b>Promemoria</b> sekmesinde. Promemoria\'yı Sınav ya da Görev olarak ekleyebilirsin; verifica / interrogazione otomatik Sınav önerilir.</p>' +
       '<button id="argo-sync-btn" onclick="argoSyncNow()" class="btn-green"' + (argoSyncWaiting ? ' disabled' : '') + '><span class="material-symbols-outlined">' + (argoSyncWaiting ? 'hourglass_top' : 'sync') + '</span>' + (argoSyncWaiting ? 'Çekiliyor… (1-2 dk)' : 'Şimdi Senkronize Et') + '</button>' +
       (argoToken() ? '' : '<p class="text-[11px] font-semibold text-on-surface-variant -mt-1">Düğme şu an GitHub sayfasını açar; orada <b>Run workflow</b>\'a bas. Tek dokunuşla çalışması için aşağıdan GitHub anahtarı ekle.</p>') +
       '<details class="bg-surface-container-lowest rounded-lg p-3">' +
