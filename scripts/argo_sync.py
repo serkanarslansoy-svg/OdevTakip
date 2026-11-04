@@ -209,9 +209,19 @@ def describe_consent_page() -> str:
     low = page.lower()
     words = [w for w in ("privacy", "consenso", "autorizz", "accett", "condizion", "termini", "informativa",
                          "rifiut", "grant_scope", "window.location", "submit()", "http-equiv=\"refresh\"") if w in low]
+    # Argo hata sayfasıysa teknik nedeni (OAuth hata açıklaması) al; kişisel veri içermez.
+    detail = ""
+    m = re.search(r'id="collapseOne"[^>]*>(.*?)</div>', page, re.S)
+    if m:
+        import html as _html
+        detail = " ".join(_html.unescape(re.sub(r"<[^>]+>", " ", m.group(1))).split())
+        detail = re.sub(r"https?://\S+", lambda x: x.group(0).split("?")[0], detail)[:300]
+    is_error = "auth-error" in page or "Error Id" in page
     import json as _json
     return "consent sayfası yapısı: " + _json.dumps({"title": p.title[:60], "forms": p.forms, "scripts": p.scripts,
-                                                     "keywords": words, "length": len(page)}, ensure_ascii=False)
+                                                     "keywords": words, "length": len(page),
+                                                     "argo_hata_sayfasi": is_error, "hata_detayi": detail},
+                                                    ensure_ascii=False)
 
 
 def fetch_homework(scuola: str, user: str, password: str) -> list[dict]:
