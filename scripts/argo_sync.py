@@ -124,17 +124,42 @@ class Firebase:
 
 
 # ------------------------------------------------------------------ argo ---
-# Argo girişte "consent" sayfasında takılırsa sayfanın YAPISINI (değerleri değil) incelemek için.
+# Ekim 2026'dan beri Argo, consent adımından sonra doğrudan yönlendirmek yerine bir
+# "onay ekranı" (TRAS-1928) gösteriyor: HTTP 200 sayfa, içinde data-auth-app-redirect
+# bağlantısı var; tarayıcı bunu JavaScript ile otomatik açıyor. Kütüphane yalnızca
+# Location başlığını izlediği için orada duruyordu. Bu sayfayı yakalayıp bağlantısını
+# normal bir 302 yönlendirmesine çeviriyoruz. Sayfa yapısını da hata teşhisi için tutuyoruz.
 _CONSENT_HTML: list[str] = []
+_CONSENT_HOPS: list[str] = []
+
+
+def consent_redirect_target(page: str) -> str | None:
+    """Onay ekranındaki [data-auth-app-redirect] bağlantısının href'i (HTML çözülmüş)."""
+    from html.parser import HTMLParser
+
+    found: list[str] = []
+
+    class P(HTMLParser):
+        def handle_starttag(self, tag, attrs):  # type: ignore[no-untyped-def]
+            a = dict(attrs)
+            if "data-auth-app-redirect" in a and (a.get("href") or "").strip():
+                found.append(a["href"].strip())
+
+    try:
+        P().feed(page)
+    except Exception:  # noqa: BLE001
+        pass
+    return found[0] if found else None
 
 
 def _capture_consent_pages() -> None:
-    """httpx yanıtlarından /auth/sso/consent sayfasının HTML'ini bellekte tutar."""
+    """httpx yanıtlarında /auth/sso/consent sayfasını yakalar; onay ekranıysa 302'ye çevirir."""
     import httpx
 
     if getattr(httpx.AsyncClient.send, "_odev_patched", False):
         return
     original = httpx.AsyncClient.send
+    drop = {"content-length", "content-encoding", "transfer-encoding", "content-type", "location"}
 
     async def send(self, request, *args, **kwargs):  # type: ignore[no-untyped-def]
         resp = await original(self, request, *args, **kwargs)
@@ -142,6 +167,15 @@ def _capture_consent_pages() -> None:
             if "/auth/sso/consent" in request.url.path:
                 await resp.aread()
                 _CONSENT_HTML.append(resp.text[:200000])
+                if resp.status_code == 200:
+                    target = consent_redirect_target(resp.text)
+                    if target:
+                        target = str(request.url.join(target))
+                        headers = [(k, v) for k, v in resp.headers.multi_items() if k.lower() not in drop]
+                        headers.append(("location", target))
+                        _CONSENT_HOPS.append(target.split("?")[0])
+                        await resp.aclose()
+                        return httpx.Response(302, headers=headers, request=request)
         except Exception:  # noqa: BLE001
             pass
         return resp
@@ -220,7 +254,9 @@ def describe_consent_page() -> str:
     import json as _json
     return "consent sayfası yapısı: " + _json.dumps({"title": p.title[:60], "forms": p.forms, "scripts": p.scripts,
                                                      "keywords": words, "length": len(page),
-                                                     "argo_hata_sayfasi": is_error, "hata_detayi": detail},
+                                                     "argo_hata_sayfasi": is_error, "hata_detayi": detail,
+                                                     "onay_ekrani_baglantisi": consent_redirect_target(page) is not None,
+                                                     "izlenen_onay_hoplari": _CONSENT_HOPS},
                                                     ensure_ascii=False)
 
 
