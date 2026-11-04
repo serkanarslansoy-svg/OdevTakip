@@ -1693,11 +1693,24 @@ function vocabResult(){
     '</div>'
   );
 }
-/* ---- Argo'dan gelen ödevler (GitHub Actions ile otomatik, veli onayına düşer) ---- */
+/* ---- Argo'dan gelen ödevler ve promemoria (GitHub Actions ile otomatik, veli onayına düşer) ---- */
 function argoItems(){
   return Object.values(state.argoInbox || {}).filter(x => x && x.id).sort((a,b) => String(a.dueDate).localeCompare(String(b.dueDate)));
 }
-/* Ödev metni İtalyanca kalır; başlık: "Ders: metnin başı". */
+/* Promemoria: öğretmen hatırlatması (verifica, interrogazione, "portare..."). Veli Sınav ya da Görev olarak ekler. */
+function argoIsProm(it){ return !!it && it.kind === 'promemoria'; }
+function argoKindOf(id){
+  const it = state.argoInbox[id];
+  if (!argoIsProm(it)) return 'task';
+  const el = $('#ai-kind-' + id);
+  return el ? el.value : (it.suggest === 'exam' ? 'exam' : 'task');
+}
+function argoKindToggle(id, v){
+  const x = $('#ai-xpw-' + id), t = $('#ai-timew-' + id);
+  if (x) x.style.display = v === 'exam' ? 'none' : '';
+  if (t) t.style.display = v === 'exam' ? '' : 'none';
+}
+/* Metin İtalyanca kalır; başlık: "Ders: metnin başı". */
 function argoTitle(it){
   const t = String(it.descIt || '').replace(/\s+/g, ' ').trim();
   const short = t.length > 48 ? t.slice(0, 46).replace(/\s+\S*$/, '') + '…' : t;
@@ -1707,49 +1720,91 @@ function argoTitle(it){
 function argoInboxCard(){
   const items = argoItems();
   if (!items.length) return '';
+  const hasProm = items.some(argoIsProm);
   const opts = cur => '<option value=""' + (cur ? '' : ' selected') + '>— Ders seç —</option>' + Object.keys(SUBJECTS).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SUBJECTS[k].name + '</option>').join('');
   return '<div class="rounded-lg bg-surface-container p-space-md flex flex-col gap-3 shadow-md ring-1 ring-tertiary-fixed-dim/40">' +
     '<div class="flex items-center justify-between gap-2">' +
       '<span class="text-[18px] font-bold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo\'dan Gelenler</span>' +
       '<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim text-[12px] font-extrabold">' + items.length + '</span>' +
     '</div>' +
-    '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Okulun Argo sisteminden otomatik çekildi, ders eşlendi. Kontrol et, onayladıkların ' + esc(state.student.nickname) + '\'un ekranına düşer.</p>' +
-    items.map(it =>
-      '<div class="rounded-lg bg-surface-container-lowest p-3 flex flex-col gap-2">' +
+    '<p class="text-[12px] font-semibold text-on-surface-variant -mt-1">Okulun Argo sisteminden otomatik çekildi, ders eşlendi. Kontrol et, onayladıkların ' + esc(state.student.nickname) + '\'un ekranına düşer.' +
+      (hasProm ? ' <b class="text-secondary">📌 Promemoria</b> kayıtlarını Sınav ya da Görev olarak ekleyebilirsin.' : '') + '</p>' +
+    items.map(it => {
+      const prom = argoIsProm(it);
+      const kind = prom && it.suggest === 'exam' ? 'exam' : 'task';
+      return '<div class="rounded-lg bg-surface-container-lowest p-3 flex flex-col gap-2' + (prom ? ' ring-1 ring-secondary-container/40' : '') + '">' +
+        (prom ? '<div class="flex items-center justify-between gap-2">' +
+          '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary text-[11px] font-extrabold shrink-0"><span class="material-symbols-outlined text-sm">push_pin</span>Promemoria</span>' +
+          '<select id="ai-kind-' + it.id + '" onchange="argoKindToggle(\'' + it.id + '\',this.value)" class="inp !w-auto !py-1 !text-[12px] font-bold">' +
+            '<option value="exam"' + (kind === 'exam' ? ' selected' : '') + '>🎯 Sınav olarak ekle</option>' +
+            '<option value="task"' + (kind === 'task' ? ' selected' : '') + '>⚔️ Görev olarak ekle</option>' +
+          '</select></div>' : '') +
         '<input id="ai-title-' + it.id + '" class="inp !py-2 !text-[13px]" value="' + esc(argoTitle(it)) + '">' +
         '<textarea id="ai-desc-' + it.id + '" class="inp !py-2 !text-[12px] min-h-[60px] resize-none">' + esc(it.descIt) + '</textarea>' +
-        (it.subjectIt ? '<p class="text-[11px] font-semibold text-on-surface-variant">Argo dersi: ' + esc(it.subjectIt) + '</p>' : '') +
-        '<select id="ai-sub-' + it.id + '" class="inp !py-1.5 !text-[12px]">' + opts(it.subject) + '</select>' +
+        (it.subjectIt ? '<p class="text-[11px] font-semibold text-on-surface-variant">' + (prom ? 'Öğretmenin dersleri: ' : 'Argo dersi: ') + esc(it.subjectIt) + '</p>' : '') +
+        '<select id="ai-sub-' + it.id + '" onchange="argoSubChange(\'' + it.id + '\',this.value)" class="inp !py-1.5 !text-[12px]">' + opts(it.subject) + '</select>' +
         '<div class="flex gap-1.5">' +
-          '<input id="ai-date-' + it.id + '" type="date" class="inp !py-1.5 !text-[12px] flex-1" value="' + esc(it.dueDate) + '">' +
-          '<input id="ai-xp-' + it.id + '" type="number" min="10" max="5000" step="10" class="inp !py-1.5 !text-[12px] !w-24" value="' + (Number(it.xp) || 100) + '">' +
+          '<input id="ai-date-' + it.id + '" type="date" class="inp !py-1.5 !text-[12px] flex-1 min-w-0" value="' + esc(it.dueDate) + '">' +
+          (prom ? '<div id="ai-timew-' + it.id + '"' + (kind === 'exam' ? '' : ' style="display:none"') + '><input id="ai-time-' + it.id + '" type="time" class="inp !py-1.5 !text-[12px] !w-28" value="' + esc(it.time || '09:30') + '"></div>' : '') +
+          '<div id="ai-xpw-' + it.id + '"' + (kind === 'exam' ? ' style="display:none"' : '') + '><input id="ai-xp-' + it.id + '" type="number" min="10" max="5000" step="10" class="inp !py-1.5 !text-[12px] !w-24" value="' + (Number(it.xp) || 100) + '"></div>' +
         '</div>' +
         '<div class="grid grid-cols-2 gap-2">' +
           '<button onclick="approveArgo(\'' + it.id + '\')" class="btn-green !py-2 text-[13px]"><span class="material-symbols-outlined text-base">check</span>Onayla</button>' +
           '<button onclick="rejectArgo(\'' + it.id + '\')" class="btn-ghost !py-2 text-[13px] text-error"><span class="material-symbols-outlined text-base">close</span>Gerek Yok</button>' +
         '</div>' +
-      '</div>'
-    ).join('') +
+      '</div>';
+    }).join('') +
     (items.length > 1 ? '<button onclick="approveAllArgo()" class="btn-orange"><span class="material-symbols-outlined">done_all</span>Hepsini Onayla (' + items.length + ')</button>' : '') +
   '</div>';
 }
+/* Ders seçilince başlık hâlâ otomatikse ders önekini güncelle (ör. "Interrogazione" → "İtalyanca: Interrogazione"). */
+function argoSubChange(id, sub){
+  const it = state.argoInbox[id], el = $('#ai-title-' + id); if (!it || !el) return;
+  const prev = el.dataset.sub != null ? el.dataset.sub : (it.subject || '');
+  if (el.value.trim() === argoTitle({ ...it, subject: prev })) el.value = argoTitle({ ...it, subject: sub });
+  el.dataset.sub = sub;
+}
+function argoVal(id, k, d){ const el = $('#ai-' + k + '-' + id); return el ? el.value : d; }
 function argoToTask(id){
   const it = state.argoInbox[id]; if (!it) return null;
-  const val = (k, d) => { const el = $('#ai-' + k + '-' + id); return el ? el.value : d; };
-  const subject = val('sub', it.subject);
+  const subject = argoVal(id, 'sub', it.subject);
   if (!subject) { toast('⚠️ Önce dersi seç'); return null; }
-  const title = String(val('title', argoTitle(it))).trim();
-  const dueDate = val('date', it.dueDate);
+  const title = String(argoVal(id, 'title', argoTitle(it))).trim();
+  const dueDate = argoVal(id, 'date', it.dueDate);
   if (!title || !dueDate) { toast('⚠️ Başlık ve tarih gerekli'); return null; }
-  const task = { id: uid(), title, desc: String(val('desc', it.descIt || '')).trim(), subject,
-    difficulty: it.difficulty === 'boss' ? 'boss' : 'normal',
-    xp: Math.max(10, Math.min(5000, parseInt(val('xp', it.xp)) || 100)),
+  const prom = argoIsProm(it);
+  const task = { id: uid(), title, desc: String(argoVal(id, 'desc', it.descIt || '')).trim(), subject,
+    difficulty: !prom && it.difficulty === 'boss' ? 'boss' : 'normal',
+    xp: Math.max(10, Math.min(5000, parseInt(argoVal(id, 'xp', it.xp)) || 100)),
     createdAt: todayStr(), dueDate, status: 'active', source: 'argo', argoId: id, activatedAt: new Date().toISOString() };
   task.gold = taskGold(task);
   return task;
 }
+function argoToExam(id){
+  const it = state.argoInbox[id]; if (!it) return null;
+  const subject = argoVal(id, 'sub', it.subject);
+  if (!subject) { toast('⚠️ Önce dersi seç'); return null; }
+  const title = String(argoVal(id, 'title', argoTitle(it))).trim();
+  const date = argoVal(id, 'date', it.dueDate);
+  if (!title || !date) { toast('⚠️ Başlık ve tarih gerekli'); return null; }
+  const rawTime = String(argoVal(id, 'time', it.time || '') || '');
+  return { id: uid(), title, subject, date, time: /^\d{2}:\d{2}$/.test(rawTime) ? rawTime : '09:30',
+    note: String(argoVal(id, 'desc', it.descIt || '')).trim(), alarmDays: 2, boss: true, source: 'argo', argoId: id };
+}
+function argoAddExam(exam){
+  state.exams.push(exam);
+  state.alarmsLast[exam.id] = new Date(exam.date + 'T' + exam.time) <= new Date() ? todayStr() : ''; // geçmiş sınav alarm çaldırmasın
+}
 function approveArgo(id){
   if (ui.role !== 'parent') return;
+  if (argoKindOf(id) === 'exam') {
+    const exam = argoToExam(id); if (!exam) return;
+    argoAddExam(exam);
+    delete state.argoInbox[id];
+    save(); renderAll();
+    toast('🎯 Sınav eklendi — ' + (state.student.nickname || '') + '\'un ekranında ' + exam.alarmDays + ' gün önce Boss Alarmı çalar');
+    return;
+  }
   const task = argoToTask(id); if (!task) return;
   state.tasks.push(task);
   delete state.argoInbox[id];
@@ -1759,17 +1814,23 @@ function approveArgo(id){
 function approveAllArgo(){
   if (ui.role !== 'parent') return;
   const ids = argoItems().map(x => x.id);
-  const tasks = [];
-  for (const id of ids) { const t = argoToTask(id); if (!t) return; tasks.push(t); }
-  askConfirm('Hepsini onayla', tasks.length + ' ödev ' + (state.student.nickname || '') + '\'un ekranına gönderilecek.', () => {
+  const tasks = [], exams = [];
+  for (const id of ids) {
+    if (argoKindOf(id) === 'exam') { const e = argoToExam(id); if (!e) return; exams.push(e); }
+    else { const t = argoToTask(id); if (!t) return; tasks.push(t); }
+  }
+  const parts = [tasks.length ? tasks.length + ' görev' : '', exams.length ? exams.length + ' sınav' : ''].filter(Boolean).join(' ve ');
+  askConfirm('Hepsini onayla', parts + ' ' + (state.student.nickname || '') + '\'un ekranına gönderilecek.', () => {
     tasks.forEach(t => { state.tasks.push(t); delete state.argoInbox[t.argoId]; });
-    save(); renderAll(); toast('⚔️ ' + tasks.length + ' görev gönderildi'); beep(true);
+    exams.forEach(e => { argoAddExam(e); delete state.argoInbox[e.argoId]; });
+    save(); renderAll(); toast('⚔️ ' + parts + ' gönderildi'); beep(true);
   }, 'Onayla');
 }
 function rejectArgo(id){
   if (ui.role !== 'parent') return;
+  const prom = argoIsProm(state.argoInbox[id]);
   delete state.argoInbox[id];
-  save(); renderAll(); toast('Argo ödevi listeden kaldırıldı');
+  save(); renderAll(); toast(prom ? 'Promemoria listeden kaldırıldı' : 'Argo ödevi listeden kaldırıldı');
 }
 /* ---- Argo senkronunu elle başlatma (GitHub Actions workflow_dispatch) ---- */
 const GH_REPO = 'serkanarslansoy-svg/OdevTakip';
@@ -1820,15 +1881,19 @@ function argoSyncCheck(){
   const ls = state.argoLastSync;
   if (!ls || !ls.at || ls.at === argoSyncFrom) return;
   argoSyncWaiting = false; clearTimeout(argoSyncTimer);
-  toast(ls.ok ? '✅ Argo senkronu bitti • ' + (Number(ls.added) || 0) + ' yeni ödev' : '❌ Argo senkronu hata verdi: ' + (ls.error || 'bilinmiyor'));
+  toast(ls.ok ? '✅ Argo senkronu bitti • ' + argoAddedText(ls) : '❌ Argo senkronu hata verdi: ' + (ls.error || 'bilinmiyor'));
   if (ui.view === 'ayarlar') renderAyarlar();
+}
+function argoAddedText(ls){
+  return (Number(ls.added) || 0) + ' yeni ödev' + (Number(ls.addedReminders) ? ', ' + Number(ls.addedReminders) + ' promemoria' : '') +
+    (ls.reminderError ? ' • promemoria alınamadı' : '');
 }
 function argoStatusHtml(){
   const ls = state.argoLastSync;
   if (!ls || !ls.at) return '<span class="text-on-surface-variant">Henüz hiç çalışmadı</span>';
   const d = new Date(ls.at);
   const when = isNaN(d) ? esc(ls.at) : d.getDate() + ' ' + MONTHS_ABBR[d.getMonth()] + ' ' + d.toTimeString().slice(0, 5);
-  return ls.ok ? '<span class="text-primary-container">' + when + ' • ' + (Number(ls.added) || 0) + ' yeni ödev</span>'
+  return ls.ok ? '<span class="text-primary-container">' + when + ' • ' + esc(argoAddedText(ls)) + '</span>'
     : '<span class="text-error">' + when + ' • Hata: ' + esc(ls.error || 'bilinmiyor') + '</span>';
 }
 function statsCard(){
@@ -2687,7 +2752,7 @@ function renderAyarlar(){
     '<section class="card flex flex-col gap-3">' +
       '<h3 class="text-[16px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-tertiary-fixed-dim">cloud_download</span>Argo Otomatik Ödev</h3>' +
       '<div class="bg-surface-container-lowest rounded-lg p-3 text-[13px] font-bold text-on-surface">Son çalışma: ' + argoStatusHtml() + '</div>' +
-      '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler günde 4 kez otomatik çekilir, dersi eşlenir ve Panelde <b>Argo\'dan Gelenler</b> listesine düşer.</p>' +
+      '<p class="text-[12px] font-semibold text-on-surface-variant">Okulun Argo sistemindeki ödevler ve <b>promemoria</b> (öğretmen hatırlatmaları) günde 4 kez otomatik çekilir, dersi eşlenir ve Panelde <b>Argo\'dan Gelenler</b> listesine düşer. Promemoria\'yı onaylarken Sınav ya da Görev olarak ekleyebilirsin; verifica / interrogazione otomatik Sınav önerilir.</p>' +
       '<button id="argo-sync-btn" onclick="argoSyncNow()" class="btn-green"' + (argoSyncWaiting ? ' disabled' : '') + '><span class="material-symbols-outlined">' + (argoSyncWaiting ? 'hourglass_top' : 'sync') + '</span>' + (argoSyncWaiting ? 'Çekiliyor… (1-2 dk)' : 'Şimdi Senkronize Et') + '</button>' +
       (argoToken() ? '' : '<p class="text-[11px] font-semibold text-on-surface-variant -mt-1">Düğme şu an GitHub sayfasını açar; orada <b>Run workflow</b>\'a bas. Tek dokunuşla çalışması için aşağıdan GitHub anahtarı ekle.</p>') +
       '<details class="bg-surface-container-lowest rounded-lg p-3">' +

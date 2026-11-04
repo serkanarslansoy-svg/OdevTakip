@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Argo DidUP Famiglia'daki "compiti assegnati" listesini çekip dersi
-uygulamadaki derse eşler ve Ödev Avcısı'nın Firebase veritabanına velinin
-onay kutusuna (odevAvci/argoInbox) yazar. Ödev metni çevrilmez, İtalyanca kalır.
+"""Argo DidUP Famiglia'daki "compiti assegnati" ve "promemoria" listelerini çekip
+dersi uygulamadaki derse eşler ve Ödev Avcısı'nın Firebase veritabanına velinin
+onay kutusuna (odevAvci/argoInbox) yazar. Metin çevrilmez, İtalyanca kalır.
+Promemoria kayıtları kind="promemoria" ile yazılır; veli onaylarken Sınav ya da
+Görev olarak ekler (verifica/interrogazione → Sınav önerilir).
 
 GitHub Actions'ta zamanlanmış olarak çalışır (.github/workflows/argo-sync.yml).
 Depo herkese açık olduğu için Actions kayıtları da herkese açıktır: bu betik
@@ -81,6 +83,35 @@ def guess_reward(text_it: str) -> tuple[int, str]:
     if re.search(r"\bportare\b|\bporta\b", low) and len(low) < 120:
         return 50, "normal"
     return 100, "normal"
+
+
+EXAM_RE = re.compile(r"verific|interrogazi|compito in classe|\btest\b|\bprova\b|esame|simulazione", re.I)
+
+
+def promemoria_kind(text_it: str) -> str:
+    """Promemoria'nın önerilen türü: sınav mı, görev mi."""
+    return "exam" if EXAM_RE.search(text_it or "") else "task"
+
+
+def promemoria_key(day: str, text: str) -> str:
+    raw = f"promemoria|{day}|{' '.join(text.split()).lower()}"
+    return "p" + hashlib.sha1(raw.encode("utf-8")).hexdigest()[:15]
+
+
+def clean_time(value: str) -> str:
+    m = re.match(r"^\s*(\d{1,2}):(\d{2})", value or "")
+    if not m or (m.group(1) in ("0", "00") and m.group(2) == "00"):
+        return ""
+    return f"{int(m.group(1)):02d}:{m.group(2)}"
+
+
+def promemoria_subject(text: str, teacher_subjects: list[str]) -> str:
+    """Önce metindeki ders adı; yoksa öğretmenin tek bir derse eşlenmesi. Belirsizse boş (veli seçer)."""
+    from_text = map_subject(text)
+    if from_text:
+        return from_text
+    keys = {k for k in (map_subject(m) for m in teacher_subjects) if k}
+    return keys.pop() if len(keys) == 1 else ""
 
 
 def short_title(subject: str, text: str) -> str:
@@ -260,14 +291,21 @@ def describe_consent_page() -> str:
                                                     ensure_ascii=False)
 
 
-def fetch_homework(scuola: str, user: str, password: str) -> list[dict]:
+def fetch_argo(scuola: str, user: str, password: str) -> tuple[list[dict], list[dict] | None]:
+    """(ödevler, promemoria). Promemoria alınamazsa None döner; ödevler yine yazılır."""
     from didupwrapper import DiDUPClientSync
 
     _capture_consent_pages()
 
     items: list[dict] = []
+    notes: list[dict] | None = None
+    # Öğretmen -> verdiği dersler (promemoria'da ders alanı yok, öğretmenden çıkarıyoruz).
+    teacher_subjects: dict[str, set[str]] = {}
     with DiDUPClientSync(scuola, user, password, auto_versione=True) as didup:
         for lezione in didup.get_registro():
+            for tkey in (lezione.pk_docente, " ".join((lezione.docente or "").split()).lower()):
+                if tkey and lezione.materia:
+                    teacher_subjects.setdefault(tkey, set()).add(lezione.materia)
             for compito in lezione.compiti:
                 text = " ".join((compito.compito or "").split())
                 due = parse_day(compito.data_consegna)
@@ -279,7 +317,23 @@ def fetch_homework(scuola: str, user: str, password: str) -> list[dict]:
                     "due": due,
                     "text": text,
                 })
-    return items
+        try:
+            notes = []
+            for p in didup.get_promemoria():
+                if not p.flg_visibile_famiglia:
+                    continue
+                text = " ".join((p.des_annotazioni or "").split())
+                day = parse_day(p.dat_giorno)
+                if not text or day is None:
+                    continue
+                subs = teacher_subjects.get(p.pk_docente) or teacher_subjects.get(
+                    " ".join((p.docente or "").split()).lower()) or set()
+                notes.append({"day": day, "text": text, "subjects": sorted(subs),
+                              "time": clean_time(p.ora_inizio)})
+        except Exception as exc:  # noqa: BLE001 - ödevler yine de yazılsın
+            log(f"Promemoria alınamadı: {type(exc).__name__}")
+            notes = None
+    return items, notes
 
 
 def build_entries(items: list[dict], known: set[str], today: date, now_iso: str) -> tuple[dict, dict]:
@@ -306,6 +360,33 @@ def build_entries(items: list[dict], known: set[str], today: date, now_iso: str)
         }
     seen = {k: today.isoformat() for k in entries}
     return entries, seen
+
+
+def build_promemoria_entries(notes: list[dict], known: set[str], today: date, now_iso: str) -> dict:
+    """Yeni promemoria kayıtlarını onay kutusu kayıtlarına çevirir (kind="promemoria")."""
+    entries: dict[str, dict] = {}
+    for n in notes:
+        if n["day"] < today - timedelta(days=1):
+            continue  # geçmiş hatırlatmaları getirme
+        key = promemoria_key(n["day"].isoformat(), n["text"])
+        if key in known or key in entries:
+            continue
+        kind = promemoria_kind(n["text"])
+        subject = promemoria_subject(n["text"], n["subjects"])
+        entries[key] = {
+            "id": key,
+            "kind": "promemoria",
+            "suggest": kind,
+            "subject": subject,
+            "subjectIt": " / ".join(n["subjects"])[:80],
+            "descIt": n["text"],
+            "dueDate": n["day"].isoformat(),
+            "time": n["time"],
+            "xp": 300 if kind == "exam" else 50,
+            "difficulty": "boss" if kind == "exam" else "normal",
+            "createdAt": now_iso,
+        }
+    return entries
 
 
 def describe_error(exc: Exception) -> str:
@@ -337,7 +418,7 @@ def main() -> int:
 
     fb = Firebase(env["FB_EMAIL"], env["FB_PASSWORD"])
     try:
-        items = fetch_homework(env["ARGO_SCUOLA"], env["ARGO_USERNAME"], env["ARGO_PASSWORD"])
+        items, notes = fetch_argo(env["ARGO_SCUOLA"], env["ARGO_USERNAME"], env["ARGO_PASSWORD"])
     except Exception as exc:  # noqa: BLE001 - ayrıntı herkese açık kayda düşmesin
         kind = describe_error(exc)
         fb.put("argoLastSync", {"at": now_iso, "ok": False, "error": kind})
@@ -346,20 +427,29 @@ def main() -> int:
             log(describe_consent_page())
         return 1
     log(f"Argo'da {len(items)} ödev kaydı bulundu.")
+    if notes is not None:
+        log(f"Argo'da {len(notes)} promemoria kaydı bulundu.")
 
     seen = fb.get("argoSeen", shallow="true") or {}
     inbox = fb.get("argoInbox", shallow="true") or {}
     known = set(seen) | set(inbox)
     entries, new_seen = build_entries(items, known, today, now_iso)
+    p_entries = build_promemoria_entries(notes or [], known, today, now_iso)
+    new_seen.update({k: today.isoformat() for k in p_entries})
 
-    if entries:
-        for e in entries.values():
+    all_entries = {**entries, **p_entries}
+    if all_entries:
+        for e in all_entries.values():
             e["title"] = short_title(e["subject"], e["descIt"])
-        fb.patch("argoInbox", entries)
+        fb.patch("argoInbox", all_entries)
         fb.patch("argoSeen", new_seen)
 
-    fb.put("argoLastSync", {"at": now_iso, "ok": True, "added": len(entries), "found": len(items)})
-    log(f"Onay kutusuna {len(entries)} yeni ödev eklendi.")
+    status = {"at": now_iso, "ok": True, "added": len(entries), "found": len(items),
+              "addedReminders": len(p_entries)}
+    if notes is None:
+        status["reminderError"] = True
+    fb.put("argoLastSync", status)
+    log(f"Onay kutusuna {len(entries)} yeni ödev, {len(p_entries)} yeni promemoria eklendi.")
     return 0
 
 
