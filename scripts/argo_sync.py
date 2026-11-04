@@ -124,8 +124,100 @@ class Firebase:
 
 
 # ------------------------------------------------------------------ argo ---
+# Argo girişte "consent" sayfasında takılırsa sayfanın YAPISINI (değerleri değil) incelemek için.
+_CONSENT_HTML: list[str] = []
+
+
+def _capture_consent_pages() -> None:
+    """httpx yanıtlarından /auth/sso/consent sayfasının HTML'ini bellekte tutar."""
+    import httpx
+
+    if getattr(httpx.AsyncClient.send, "_odev_patched", False):
+        return
+    original = httpx.AsyncClient.send
+
+    async def send(self, request, *args, **kwargs):  # type: ignore[no-untyped-def]
+        resp = await original(self, request, *args, **kwargs)
+        try:
+            if "/auth/sso/consent" in request.url.path:
+                await resp.aread()
+                _CONSENT_HTML.append(resp.text[:200000])
+        except Exception:  # noqa: BLE001
+            pass
+        return resp
+
+    send._odev_patched = True  # type: ignore[attr-defined]
+    httpx.AsyncClient.send = send  # type: ignore[method-assign]
+
+
+def describe_consent_page() -> str:
+    """Consent sayfasının yalnızca yapısı: başlık, form hedefi (sorgusuz), alan adları/türleri,
+    düğme etiketleri ve birkaç anahtar kelimenin var/yok bilgisi. Hiçbir alan DEĞERİ ve
+    serbest metin (ad-soyad olabilir) yazılmaz."""
+    if not _CONSENT_HTML:
+        return "consent sayfası yakalanamadı"
+    from html.parser import HTMLParser
+
+    page = _CONSENT_HTML[-1]
+
+    class P(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.title, self.in_title, self.in_button = "", False, False
+            self.forms: list[dict] = []
+            self.scripts = 0
+
+        def handle_starttag(self, tag, attrs):  # type: ignore[no-untyped-def]
+            a = dict(attrs)
+            if tag == "title":
+                self.in_title = True
+            elif tag == "script":
+                self.scripts += 1
+            elif tag == "form":
+                act = (a.get("action") or "").split("?")[0]
+                self.forms.append({"method": (a.get("method") or "get").lower(), "action": act, "fields": []})
+            elif tag in ("input", "select", "textarea") and self.forms:
+                t = (a.get("type") or tag).lower()
+                f = {"name": a.get("name", ""), "type": t}
+                if t in ("submit", "button") and a.get("value") and len(a.get("value", "")) <= 30:
+                    f["label"] = a["value"]
+                if t == "checkbox":
+                    f["checked"] = "checked" in a
+                self.forms[-1]["fields"].append(f)
+            elif tag == "button" and self.forms:
+                self.in_button = True
+                self.forms[-1]["fields"].append({"name": a.get("name", ""), "type": "button",
+                                                 "value": (a.get("value") or "")[:30], "label": ""})
+
+        def handle_endtag(self, tag):  # type: ignore[no-untyped-def]
+            if tag == "title":
+                self.in_title = False
+            elif tag == "button":
+                self.in_button = False
+
+        def handle_data(self, data):  # type: ignore[no-untyped-def]
+            if self.in_title:
+                self.title += data.strip()
+            elif self.in_button and self.forms:
+                self.forms[-1]["fields"][-1]["label"] = (self.forms[-1]["fields"][-1]["label"] + " " + data.strip()).strip()[:30]
+
+    p = P()
+    try:
+        p.feed(page)
+    except Exception:  # noqa: BLE001
+        pass
+    low = page.lower()
+    words = [w for w in ("privacy", "consenso", "autorizz", "accett", "condizion", "termini", "informativa",
+                         "rifiut", "grant_scope", "window.location", "submit()", "http-equiv=\"refresh\"") if w in low]
+    import json as _json
+    return "consent sayfası yapısı: " + _json.dumps({"title": p.title[:60], "forms": p.forms, "scripts": p.scripts,
+                                                     "keywords": words, "length": len(page)}, ensure_ascii=False)
+
+
 def fetch_homework(scuola: str, user: str, password: str) -> list[dict]:
     from didupwrapper import DiDUPClientSync
+
+    _capture_consent_pages()
 
     items: list[dict] = []
     with DiDUPClientSync(scuola, user, password, auto_versione=True) as didup:
@@ -204,6 +296,8 @@ def main() -> int:
         kind = describe_error(exc)
         fb.put("argoLastSync", {"at": now_iso, "ok": False, "error": kind})
         log(f"Argo'dan ödevler alınamadı: {kind}")
+        if "consent" in kind:
+            log(describe_consent_page())
         return 1
     log(f"Argo'da {len(items)} ödev kaydı bulundu.")
 
