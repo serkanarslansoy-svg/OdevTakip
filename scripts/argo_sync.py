@@ -170,6 +170,21 @@ def build_entries(items: list[dict], known: set[str], today: date, now_iso: str)
     return entries, seen
 
 
+def describe_error(exc: Exception) -> str:
+    """Hatanın türü + kütüphanenin kısa açıklaması (ör. 'credenziali errate').
+
+    Yalnızca kütüphanenin kendi mesajı ve HTTP kodu kullanılır; istek adresi,
+    sunucu yanıtı (payload) ve sorgu parametreleri herkese açık kayda yazılmaz.
+    """
+    kind = type(exc).__name__
+    msg = str(getattr(exc, "message", "") or "")
+    msg = re.sub(r"https?://\S+", lambda m: m.group(0).split("?")[0], msg)  # adreslerden sorguyu at
+    msg = " ".join(msg.split())[:160]
+    code = getattr(exc, "status_code", None)
+    out = kind + (f": {msg}" if msg else "")
+    return out + (f" (HTTP {code})" if code else "")
+
+
 def main() -> int:
     env = {k: os.environ.get(k, "").strip() for k in
            ("ARGO_SCUOLA", "ARGO_USERNAME", "ARGO_PASSWORD", "FB_EMAIL", "FB_PASSWORD")}
@@ -186,7 +201,7 @@ def main() -> int:
     try:
         items = fetch_homework(env["ARGO_SCUOLA"], env["ARGO_USERNAME"], env["ARGO_PASSWORD"])
     except Exception as exc:  # noqa: BLE001 - ayrıntı herkese açık kayda düşmesin
-        kind = type(exc).__name__
+        kind = describe_error(exc)
         fb.put("argoLastSync", {"at": now_iso, "ok": False, "error": kind})
         log(f"Argo'dan ödevler alınamadı: {kind}")
         return 1
