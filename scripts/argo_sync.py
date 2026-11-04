@@ -3,7 +3,9 @@
 dersi uygulamadaki derse eşler ve Ödev Avcısı'nın Firebase veritabanına velinin
 onay kutusuna (odevAvci/argoInbox) yazar. Metin çevrilmez, İtalyanca kalır.
 Promemoria kayıtları kind="promemoria" ile yazılır; veli onaylarken Sınav ya da
-Görev olarak ekler (verifica/interrogazione → Sınav önerilir).
+Görev olarak ekler (verifica/interrogazione → Sınav önerilir). Notlar (voti)
+odevAvci/argoGrades altına yazılır; uygulama bunları sınavlarla eşleyip veliye
+"Notu Uygula" önerisi olarak gösterir.
 
 GitHub Actions'ta zamanlanmış olarak çalışır (.github/workflows/argo-sync.yml).
 Depo herkese açık olduğu için Actions kayıtları da herkese açıktır: bu betik
@@ -291,14 +293,15 @@ def describe_consent_page() -> str:
                                                     ensure_ascii=False)
 
 
-def fetch_argo(scuola: str, user: str, password: str) -> tuple[list[dict], list[dict] | None]:
-    """(ödevler, promemoria). Promemoria alınamazsa None döner; ödevler yine yazılır."""
+def fetch_argo(scuola: str, user: str, password: str) -> tuple[list[dict], list[dict] | None, list | None]:
+    """(ödevler, promemoria, notlar). Promemoria/notlar alınamazsa None döner; ödevler yine yazılır."""
     from didupwrapper import DiDUPClientSync
 
     _capture_consent_pages()
 
     items: list[dict] = []
     notes: list[dict] | None = None
+    grades: list | None = None
     # Öğretmen -> verdiği dersler (promemoria'da ders alanı yok, öğretmenden çıkarıyoruz).
     teacher_subjects: dict[str, set[str]] = {}
     with DiDUPClientSync(scuola, user, password, auto_versione=True) as didup:
@@ -333,7 +336,12 @@ def fetch_argo(scuola: str, user: str, password: str) -> tuple[list[dict], list[
         except Exception as exc:  # noqa: BLE001 - ödevler yine de yazılsın
             log(f"Promemoria alınamadı: {type(exc).__name__}")
             notes = None
-    return items, notes
+        try:
+            grades = list(didup.get_voti())
+        except Exception as exc:  # noqa: BLE001
+            log(f"Notlar alınamadı: {type(exc).__name__}")
+            grades = None
+    return items, notes, grades
 
 
 def build_entries(items: list[dict], known: set[str], today: date, now_iso: str) -> tuple[dict, dict]:
@@ -389,6 +397,39 @@ def build_promemoria_entries(notes: list[dict], known: set[str], today: date, no
     return entries
 
 
+def build_grades(voti: list, today: date) -> dict:
+    """Argo notlarını uygulamanın okuyacağı biçime çevirir (yalnızca sayısal notlar, son 150 gün)."""
+    out: dict[str, dict] = {}
+    for v in voti:
+        value = getattr(v, "valore", None)
+        day = parse_day(getattr(v, "dat_giorno", ""))
+        if value is None or day is None or day < today - timedelta(days=150):
+            continue
+        try:
+            value = round(float(value), 2)
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= value <= 10:
+            continue
+        materia = " ".join((v.des_materia or "").split())
+        kind = (v.cod_voto_pratico or "").strip().upper()[:1]
+        prg = v.prg_voto if v.prg_voto is not None else v.cod_codice
+        raw = f"{day.isoformat()}|{v.pk_materia or materia.lower()}|{prg}|{kind}"
+        key = "g" + hashlib.sha1(raw.encode("utf-8")).hexdigest()[:15]
+        out[key] = {
+            "id": key,
+            "date": day.isoformat(),
+            "subject": map_subject(materia),
+            "subjectIt": materia[:60],
+            "value": value,
+            "code": (v.cod_codice or "").strip()[:8],
+            "kind": kind,  # S = scritto (yazılı), N = orale (sözlü), P = pratico
+            "desc": " ".join((v.descrizione_prova or "").split())[:120],
+            "comment": " ".join((v.des_commento or "").split())[:200],
+        }
+    return out
+
+
 def describe_error(exc: Exception) -> str:
     """Hatanın türü + kütüphanenin kısa açıklaması (ör. 'credenziali errate').
 
@@ -418,7 +459,7 @@ def main() -> int:
 
     fb = Firebase(env["FB_EMAIL"], env["FB_PASSWORD"])
     try:
-        items, notes = fetch_argo(env["ARGO_SCUOLA"], env["ARGO_USERNAME"], env["ARGO_PASSWORD"])
+        items, notes, voti = fetch_argo(env["ARGO_SCUOLA"], env["ARGO_USERNAME"], env["ARGO_PASSWORD"])
     except Exception as exc:  # noqa: BLE001 - ayrıntı herkese açık kayda düşmesin
         kind = describe_error(exc)
         fb.put("argoLastSync", {"at": now_iso, "ok": False, "error": kind})
@@ -429,6 +470,9 @@ def main() -> int:
     log(f"Argo'da {len(items)} ödev kaydı bulundu.")
     if notes is not None:
         log(f"Argo'da {len(notes)} promemoria kaydı bulundu.")
+    grades = build_grades(voti, today) if voti is not None else None
+    if grades is not None:
+        log(f"Argo'da {len(grades)} not bulundu (son 150 gün).")
 
     seen = fb.get("argoSeen", shallow="true") or {}
     inbox = fb.get("argoInbox", shallow="true") or {}
@@ -448,6 +492,11 @@ def main() -> int:
               "addedReminders": len(p_entries)}
     if notes is None:
         status["reminderError"] = True
+    if grades is not None:
+        fb.put("argoGrades", grades)
+        status["grades"] = len(grades)
+    else:
+        status["gradeError"] = True
     fb.put("argoLastSync", status)
     log(f"Onay kutusuna {len(entries)} yeni ödev, {len(p_entries)} yeni promemoria eklendi.")
     return 0

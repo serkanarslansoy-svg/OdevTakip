@@ -124,6 +124,14 @@ promemoria'nın ders alanı yoktur; ders, metinden ya da öğretmenin derslerind
   "verifica", "interrogazione", "test", "prova" geçenlerde otomatik önerilir.
 - **⚔️ Görev olarak ekle** → normal görev olur (ör. "portare il flauto").
 
+**Notlar (voti):** Her senkronda Argo'daki notlar da çekilir ve **📝 Notlar** sekmesinde
+uygulamadaki sınavlarla eşleştirilir: aynı ders, sınav günü ya da sonraki 7 gün (yazılı not
+önce). Sınavın notu yoksa **Notu Uygula**, farklıysa **Notu Güncelle** çıkar; XP ve altın
+sınav kurallarına göre otomatik hesaplanır (not düşerse fark geri alınır). Argo'da öğretmen
+notu sonradan düzeltirse yeniden önerilir. Uygulamada karşılığı olmayan son 30 günün notları
+**Sınav Ekle** ile geriye dönük sınav olarak notuyla girilebilir; **Yoksay** dediğin not bir
+daha önerilmez. Sayısal olmayan notlar (NC, assente vb.) alınmaz.
+
 **Kurulum (bir kez):**
 1. Önce yukarıdaki **Aile Hesabı** adımlarını tamamla (Firebase'de e-posta/şifre kullanıcısı).
 2. GitHub'da depo → **Settings** → **Secrets and variables** → **Actions** →
