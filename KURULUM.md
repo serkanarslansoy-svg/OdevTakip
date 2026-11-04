@@ -116,6 +116,13 @@ listesine düşer. Ruz'un ekranına sen
 onayladıktan sonra geçer. Onaylarken başlığı, açıklamayı, dersi, tarihi ve XP'yi düzeltebilirsin;
 "Gerek Yok" dediğin ödev bir daha gelmez.
 
+**Promemoria (öğretmen hatırlatmaları)** da aynı listeye 📌 etiketiyle düşer. Argo'da
+promemoria'nın ders alanı yoktur; ders, metinden ya da öğretmenin derslerinden çıkarılır
+(öğretmen birden fazla ders veriyorsa boş bırakılır, sen seçersin). Onaylarken türünü seç:
+- **🎯 Sınav olarak ekle** → Sınavlar'a Boss sınavı olarak girer (2 gün önce alarm).
+  "verifica", "interrogazione", "test", "prova" geçenlerde otomatik önerilir.
+- **⚔️ Görev olarak ekle** → normal görev olur (ör. "portare il flauto").
+
 **Kurulum (bir kez):**
 1. Önce yukarıdaki **Aile Hesabı** adımlarını tamamla (Firebase'de e-posta/şifre kullanıcısı).
 2. GitHub'da depo → **Settings** → **Secrets and variables** → **Actions** →
