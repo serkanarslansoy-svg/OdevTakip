@@ -1035,6 +1035,7 @@ function openTaskDetail(id){
       '<div class="flex justify-center">' + statusChip(t) + '</div>' +
       (t.status === 'missed' ? '<p class="text-[12px] font-semibold text-on-surface-variant text-center">Süresi geçtiği için yapılmadı sayıldı. Komutan "yapıldı" sayarsa ceza geri alınır.</p>' : '') +
       (t.status === 'active' ? '<button onclick="closeDetail();completeTask(\'' + t.id + '\')" class="btn-orange"><span class="material-symbols-outlined text-base">check_circle</span>Görevi Tamamla</button>' : '') +
+      (ui.role === 'parent' ? '<button onclick="openTaskEditor(\'' + t.id + '\')" class="btn-ghost"><span class="material-symbols-outlined text-base">edit</span>Düzenle</button>' : '') +
       '<button onclick="closeDetail()" class="btn-ghost">Kapat</button>' +
     '</div>');
 }
@@ -1228,6 +1229,26 @@ let calSelected = todayStr();
 function calKey(y, m, d){ return y + '-' + String(m + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0'); }
 function calChange(delta){ calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + delta, 1); calSelected = calKey(calCursor.getFullYear(), calCursor.getMonth(), 1); renderCalendar(); }
 function calPick(ds){ calSelected = ds; renderCalendar(); }
+/* Takvimde görev satırı: başlık, ders/durum, açıklama (3 satıra kadar). Basınca ayrıntı; veli için düzenle. */
+function calTaskRow(t){
+  const st = t.status === 'completed' ? ['check_circle', 'text-primary-container', 'Tamamlandı']
+    : t.status === 'missed' ? ['cancel', 'text-error', 'Yapılmadı']
+    : t.status === 'pending' ? ['hourglass_top', 'text-tertiary-fixed-dim', 'Onay bekliyor']
+    : ['assignment', 'text-tertiary-fixed-dim', ''];
+  const desc = String(t.desc || '').trim();
+  const showDesc = desc && desc.replace(/\s+/g, ' ') !== String(t.title || '').replace(/\s+/g, ' ');
+  return '<div class="w-full flex items-start gap-1.5 p-2.5 rounded-lg bg-surface-container-lowest' + (t.status === 'missed' ? ' ring-1 ring-error/40' : '') + '">' +
+    '<button onclick="openTaskDetail(\'' + t.id + '\')" class="flex-1 min-w-0 flex items-start gap-2.5 text-left">' +
+      '<span class="material-symbols-outlined text-base mt-0.5 ' + st[1] + '">' + st[0] + '</span>' +
+      '<span class="flex-1 min-w-0">' +
+        '<span class="block text-[13px] font-extrabold text-on-surface leading-snug' + (t.status === 'completed' ? ' line-through opacity-70' : '') + '">' + esc(t.title) + '</span>' +
+        '<span class="block text-[11px] font-semibold text-on-surface-variant">' + esc((SUBJECTS[t.subject] || {}).name || '') + (st[2] ? ' • ' + st[2] : '') + '</span>' +
+        (showDesc ? '<span class="block mt-1 text-[12px] font-medium text-on-surface/80 leading-snug whitespace-pre-line line-clamp-3">' + esc(desc) + '</span>' : '') +
+      '</span>' +
+    '</button>' +
+    (ui.role === 'parent' ? '<button onclick="openTaskEditor(\'' + t.id + '\')" class="p-2 rounded-full bg-primary-container/15 text-primary-container shrink-0" aria-label="Düzenle"><span class="material-symbols-outlined text-base">edit</span></button>' : '') +
+  '</div>';
+}
 function renderCalendar(){
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   const first = new Date(y, m, 1), offset = (first.getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate();
@@ -1245,7 +1266,7 @@ function renderCalendar(){
       '</button>');
   }
   const selectedTasks = taskByDate[calSelected] || [], selectedExams = examByDate[calSelected] || [];
-  const taskRows = selectedTasks.length ? selectedTasks.map(t => '<div class="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg bg-surface-container-lowest"><span class="material-symbols-outlined text-base ' + (t.status === 'completed' ? 'text-primary-container' : t.status === 'missed' ? 'text-error' : 'text-tertiary-fixed-dim') + '">' + (t.status === 'completed' ? 'check_circle' : t.status === 'missed' ? 'cancel' : 'assignment') + '</span><span class="flex-1 min-w-0"><span class="block text-[13px] font-extrabold text-on-surface truncate">' + esc(t.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant truncate">' + (t.status === 'completed' ? 'Tamamlandı' : (SUBJECTS[t.subject] || {}).name || '') + '</span></span></div>').join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için ödev yok.</p>';
+  const taskRows = selectedTasks.length ? selectedTasks.map(calTaskRow).join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için ödev yok.</p>';
   const examRows = selectedExams.length ? selectedExams.map(e => '<div class="flex items-center gap-2.5 p-2.5 rounded-lg bg-secondary-container/10"><span class="material-symbols-outlined text-secondary-container">local_fire_department</span><span class="flex-1"><span class="block text-[13px] font-extrabold text-primary">' + esc(e.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(e.time || '09:30') + (e.note ? ' · ' + esc(e.note) : '') + '</span></span></div>').join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için sınav yok.</p>';
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="card"><div class="flex items-center justify-between gap-2"><button onclick="calChange(-1)" class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined">chevron_left</span></button><div class="text-center"><p class="text-[19px] font-extrabold text-primary">' + MONTHS_TR[m] + ' ' + y + '</p><p class="text-[11px] font-semibold text-on-surface-variant">Gün seçerek ödev ve sınavları gör</p></div><button onclick="calChange(1)" class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined">chevron_right</span></button></div>' +
@@ -2528,33 +2549,48 @@ function editTaskReward(id){
   }
   save(); renderGorev(); toast('✅ Görev ödülü güncellendi: +' + t.xp + ' XP / +' + t.gold + ' 🪙');
 }
-function editTaskAll(id){
+/* Görev düzenleme formu (Takvim, görev ayrıntısı ve Görev Ata'dan açılır; yalnızca veli). */
+function editTaskAll(id){ openTaskEditor(id); }
+function openTaskEditor(id){
+  if (ui.role !== 'parent') return;
   const t = state.tasks.find(x => x.id === id); if (!t) return;
+  const subOpts = (SUBJECTS[t.subject] ? '' : '<option value="' + esc(t.subject || '') + '" selected>' + esc(t.subject || '— Ders yok —') + '</option>') +
+    Object.keys(SUBJECTS).map(k => '<option value="' + k + '"' + (k === t.subject ? ' selected' : '') + '>' + SUBJECTS[k].name + '</option>').join('');
+  openDetail('<div class="flex flex-col gap-3">' +
+    '<h3 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-primary-container">edit</span>Görevi Düzenle</h3>' +
+    (t.status === 'completed' ? '<p class="text-[12px] font-semibold text-tertiary-fixed-dim -mt-1">Bu görev tamamlandı; XP veya altını değiştirirsen fark ' + esc(state.student.nickname) + '\'a yansır.</p>' : '') +
+    '<div><label class="lbl">Başlık *</label><input id="te-title" class="inp" value="' + esc(t.title) + '"></div>' +
+    '<div><label class="lbl">Açıklama</label><textarea id="te-desc" class="inp min-h-[110px]" placeholder="Sayfa, alıştırma, notlar...">' + esc(t.desc || '') + '</textarea></div>' +
+    '<div class="grid grid-cols-2 gap-2">' +
+      '<div><label class="lbl">Ders</label><select id="te-sub" class="inp">' + subOpts + '</select></div>' +
+      '<div><label class="lbl">Teslim günü *</label><input id="te-date" type="date" class="inp" value="' + esc(t.dueDate || todayStr()) + '"></div>' +
+    '</div>' +
+    '<div class="grid grid-cols-2 gap-2">' +
+      '<div><label class="lbl">XP</label><input id="te-xp" type="number" min="10" max="5000" step="10" inputmode="numeric" class="inp" value="' + (Number(t.xp) || 100) + '"></div>' +
+      '<div><label class="lbl">Altın</label><input id="te-gold" type="number" min="0" max="500" inputmode="numeric" class="inp" value="' + taskGold(t) + '"></div>' +
+    '</div>' +
+    '<button onclick="saveTaskEdit(\'' + t.id + '\')" class="btn-green"><span class="material-symbols-outlined">save</span>Kaydet</button>' +
+    '<button onclick="closeDetail()" class="btn-ghost">Vazgeç</button>' +
+  '</div>');
+}
+function saveTaskEdit(id){
+  if (ui.role !== 'parent') return;
+  const t = state.tasks.find(x => x.id === id); if (!t) return;
+  const title = ($('#te-title').value || '').trim();
+  if (!title) { toast('⚠️ Başlık gerekli'); return; }
+  const date = $('#te-date').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || Number.isNaN(new Date(date + 'T00:00:00').getTime())) { toast('⚠️ Geçerli bir teslim günü seç'); return; }
+  const xp = Math.round(Math.max(10, Math.min(5000, Number($('#te-xp').value) || 0)));
+  const gold = Math.round(Math.max(0, Math.min(500, Number($('#te-gold').value) || 0)));
   const wasCompleted = t.status === 'completed';
-  const oldXp = Number(t.xp) || 0;
-  const oldGold = taskGold(t);
-  const title = prompt('Görev başlığı:', t.title);
-  if (title === null) return;
-  const desc = prompt('Görev açıklaması:', t.desc || '');
-  if (desc === null) return;
-  const date = prompt('Teslim günü (YYYY-AA-GG):', t.dueDate || todayStr());
-  if (date === null) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(date + 'T00:00:00').getTime())) { toast('Tarih formatı geçersiz. Örnek: 2026-10-06'); return; }
-  const xpRaw = prompt('XP ödülü:', String(t.xp));
-  if (xpRaw === null) return;
-  const goldRaw = prompt('Altın ödülü:', String(oldGold));
-  if (goldRaw === null) return;
-  const xp = Math.max(10, Math.min(5000, Number(xpRaw) || 0));
-  const gold = Math.max(0, Math.min(500, Number(goldRaw) || 0));
-  if (!xp) { toast('XP 0 olamaz.'); return; }
-  t.title = title.trim() || t.title;
-  t.desc = desc.trim();
+  const oldXp = Number(t.xp) || 0, oldGold = taskGold(t);
+  t.title = title;
+  t.desc = ($('#te-desc').value || '').trim();
+  t.subject = $('#te-sub').value || t.subject;
   t.dueDate = date;
-  t.xp = Math.round(xp);
-  t.gold = Math.round(gold);
+  t.xp = xp; t.gold = gold;
   if (wasCompleted) {
-    const xpDelta = t.xp - oldXp;
-    const goldDelta = t.gold - oldGold;
+    const xpDelta = t.xp - oldXp, goldDelta = t.gold - oldGold;
     state.xp = Math.max(0, state.xp + xpDelta);
     state.totalXp = Math.max(0, state.totalXp + xpDelta);
     state.gold = Math.max(0, state.gold + goldDelta);
@@ -2564,7 +2600,7 @@ function editTaskAll(id){
     }
     pruneBadges(); checkBadges();
   }
-  save(); renderGorev(); toast('✅ Görev tamamen güncellendi');
+  closeDetail(); save(); renderAll(); toast('✅ Görev güncellendi');
 }
 function deleteTask(id){
   const tk = state.tasks.find(t => t.id === id);
