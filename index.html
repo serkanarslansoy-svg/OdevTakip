@@ -1249,6 +1249,19 @@ function calTaskRow(t){
     (ui.role === 'parent' ? '<button onclick="openTaskEditor(\'' + t.id + '\')" class="p-2 rounded-full bg-primary-container/15 text-primary-container shrink-0" aria-label="Düzenle"><span class="material-symbols-outlined text-base">edit</span></button>' : '') +
   '</div>';
 }
+/* Takvimde sınav satırı: başlık, ders/saat/tür/not, kapsam; veli için düzenle. */
+function calExamRow(e){
+  const meta = [(SUBJECTS[e.subject] || {}).name, e.time || '09:30', e.boss === false ? 'Normal sınav' : 'Boss', e.score != null ? 'Not: ' + nf(e.score) + '/10' : ''].filter(Boolean).join(' • ');
+  return '<div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-secondary-container/10">' +
+    '<span class="material-symbols-outlined text-secondary-container mt-0.5">local_fire_department</span>' +
+    '<span class="flex-1 min-w-0">' +
+      '<span class="block text-[13px] font-extrabold text-primary leading-snug">' + esc(e.title) + '</span>' +
+      '<span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(meta) + '</span>' +
+      (e.note ? '<span class="block mt-1 text-[12px] font-medium text-on-surface/80 leading-snug whitespace-pre-line">' + esc(e.note) + '</span>' : '') +
+    '</span>' +
+    (ui.role === 'parent' ? '<button onclick="openExamEditor(\'' + e.id + '\')" class="p-2 rounded-full bg-secondary-container/20 text-secondary shrink-0" aria-label="Sınavı düzenle"><span class="material-symbols-outlined text-base">edit</span></button>' : '') +
+  '</div>';
+}
 function renderCalendar(){
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   const first = new Date(y, m, 1), offset = (first.getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate();
@@ -1267,7 +1280,7 @@ function renderCalendar(){
   }
   const selectedTasks = taskByDate[calSelected] || [], selectedExams = examByDate[calSelected] || [];
   const taskRows = selectedTasks.length ? selectedTasks.map(calTaskRow).join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için ödev yok.</p>';
-  const examRows = selectedExams.length ? selectedExams.map(e => '<div class="flex items-center gap-2.5 p-2.5 rounded-lg bg-secondary-container/10"><span class="material-symbols-outlined text-secondary-container">local_fire_department</span><span class="flex-1"><span class="block text-[13px] font-extrabold text-primary">' + esc(e.title) + '</span><span class="block text-[11px] font-semibold text-on-surface-variant">' + esc(e.time || '09:30') + (e.note ? ' · ' + esc(e.note) : '') + '</span></span></div>').join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için sınav yok.</p>';
+  const examRows = selectedExams.length ? selectedExams.map(calExamRow).join('') : '<p class="text-[12px] font-semibold text-on-surface-variant">Bu gün için sınav yok.</p>';
   $('#main').innerHTML = '<div class="flex flex-col w-full px-gutter gap-space-md pb-6">' +
     '<div class="card"><div class="flex items-center justify-between gap-2"><button onclick="calChange(-1)" class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined">chevron_left</span></button><div class="text-center"><p class="text-[19px] font-extrabold text-primary">' + MONTHS_TR[m] + ' ' + y + '</p><p class="text-[11px] font-semibold text-on-surface-variant">Gün seçerek ödev ve sınavları gör</p></div><button onclick="calChange(1)" class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined">chevron_right</span></button></div>' +
     '<div class="grid grid-cols-7 gap-1 mt-4">' + ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].map(x => '<span class="text-center text-[10px] font-extrabold text-on-surface-variant">' + x + '</span>').join('') + cells.join('') + '</div>' +
@@ -2627,6 +2640,7 @@ function renderPlanla(){
       '<div class="flex-1 min-w-0"><p class="text-[14px] font-bold ' + (past ? 'text-on-surface-variant line-through' : 'text-primary') + ' truncate">' + esc(e.title) + '</p>' +
       '<p class="text-[11px] font-semibold text-on-surface-variant truncate">' + (SUBJECTS[e.subject] || {name:''}).name + ' • ' + esc(e.time || '09:30') + ' • ' + (e.boss === false ? 'Normal sınav' : 'Boss sınavı') + (e.score != null ? ' • Not: ' + nf(e.score) + '/10' : '') + '</p></div>' +
       (past ? '<button onclick="recordExamScore(\'' + e.id + '\')" class="px-2 py-1.5 rounded-lg bg-secondary-container/20 text-secondary text-[11px] font-extrabold shrink-0">' + (e.score == null ? 'Not Gir' : 'Notu Düzenle') + '</button>' : '') +
+      '<button onclick="openExamEditor(\'' + e.id + '\')" class="p-2 rounded-full bg-secondary-container/20 text-secondary shrink-0" aria-label="Sınavı düzenle"><span class="material-symbols-outlined text-base">edit</span></button>' +
       '<button onclick="deleteExam(\'' + e.id + '\')" class="p-2 rounded-full bg-error-container/15 text-error shrink-0"><span class="material-symbols-outlined text-base">delete</span></button>' +
     '</div>';
   }).join('') : '<p class="text-[13px] font-semibold text-on-surface-variant py-2">Planlanmış sınav yok.</p>';
@@ -2702,6 +2716,80 @@ function submitExam(){
   save(); renderPlanla();
   if (past) toast('📋 Geçmiş sınav eklendi — notunu "Not Gir" ile girebilirsin');
   else { toast('🎯 Boss savaşı planlandı! ' + leftLabel(new Date(exam.date + 'T' + exam.time))); beep(false); }
+}
+/* Sınav düzenleme formu (Takvim ve Planla'dan; yalnızca veli). Not boş bırakılırsa not ve XP'si geri alınır. */
+function openExamEditor(id){
+  if (ui.role !== 'parent') return;
+  const e = state.exams.find(x => x.id === id); if (!e) return;
+  const subOpts = (SUBJECTS[e.subject] ? '' : '<option value="' + esc(e.subject || '') + '" selected>' + esc(e.subject || '— Ders yok —') + '</option>') +
+    Object.keys(SUBJECTS).map(k => '<option value="' + k + '"' + (k === e.subject ? ' selected' : '') + '>' + SUBJECTS[k].name + '</option>').join('');
+  openDetail('<div class="flex flex-col gap-3">' +
+    '<h3 class="text-[18px] font-extrabold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container">edit</span>Sınavı Düzenle</h3>' +
+    '<div><label class="lbl">Sınav / Boss Adı *</label><input id="xe-title" class="inp" value="' + esc(e.title) + '"></div>' +
+    '<div><label class="lbl">Ders</label><select id="xe-sub" class="inp">' + subOpts + '</select></div>' +
+    '<div class="grid grid-cols-2 gap-2">' +
+      '<div><label class="lbl">Tarih *</label><input id="xe-date" type="date" class="inp" value="' + esc(e.date) + '"></div>' +
+      '<div><label class="lbl">Saat</label><input id="xe-time" type="time" class="inp" value="' + esc(e.time || '09:30') + '"></div>' +
+    '</div>' +
+    '<div><label class="lbl">Not / Kapsam</label><textarea id="xe-note" class="inp min-h-[100px]" placeholder="Konular, sayfalar, getirilecek araçlar...">' + esc(e.note || '') + '</textarea></div>' +
+    '<div class="grid grid-cols-2 gap-2">' +
+      '<div><label class="lbl">Alarm: kaç gün önce?</label><input id="xe-alarm" type="number" min="0" max="14" inputmode="numeric" class="inp" value="' + (e.alarmDays != null ? e.alarmDays : 2) + '"></div>' +
+      '<div><label class="lbl">Not (geçmiş sınav)</label><input id="xe-score" type="text" inputmode="decimal" class="inp" placeholder="0–10, ör. 8,5" value="' + (e.score != null ? String(e.score).replace('.', ',') : '') + '"></div>' +
+    '</div>' +
+    '<label class="flex items-center gap-2 text-[13px] font-bold text-on-surface"><input id="xe-boss" type="checkbox"' + (e.boss === false ? '' : ' checked') + ' class="accent-orange-500 w-5 h-5"> Önemli sınav / Boss (8+ başarı rozeti)</label>' +
+    (e.score != null ? '<p class="text-[11px] font-semibold text-on-surface-variant -mt-1">Notu silersen bu sınavdan kazanılan XP ve altın geri alınır.</p>' : '') +
+    '<button onclick="saveExamEdit(\'' + e.id + '\')" class="btn-orange"><span class="material-symbols-outlined">save</span>Kaydet</button>' +
+    '<button onclick="closeDetail()" class="btn-ghost">Vazgeç</button>' +
+  '</div>');
+}
+function clearExamScore(e){
+  const prev = e.awardedXp || 0;
+  if (prev) {
+    removeHistory(prev, e.awardedAt);
+    state.xp = Math.max(0, state.xp - prev);
+    state.totalXp = Math.max(0, state.totalXp - prev);
+    state.gold = Math.max(0, state.gold - goldForXp(prev));
+  }
+  delete e.score; delete e.awardedXp; delete e.awardedAt;
+  pruneBadges();
+}
+function saveExamEdit(id){
+  if (ui.role !== 'parent') return;
+  const e = state.exams.find(x => x.id === id); if (!e) return;
+  const title = ($('#xe-title').value || '').trim();
+  if (!title) { toast('⚠️ Sınav adı gerekli!'); return; }
+  const date = $('#xe-date').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || Number.isNaN(new Date(date + 'T00:00:00').getTime())) { toast('⚠️ Geçerli bir tarih seç'); return; }
+  const time = /^\d{2}:\d{2}$/.test($('#xe-time').value || '') ? $('#xe-time').value : '09:30';
+  const past = new Date(date + 'T' + time) <= new Date();
+  const rawScore = ($('#xe-score').value || '').trim();
+  let score = null;
+  if (rawScore) {
+    if (!past) { toast('⚠️ Not yalnızca geçmiş tarihli sınava girilebilir'); return; }
+    score = parseExamScore(rawScore);
+    if (score == null) { toast('0 ile 10 arasında geçerli bir not gir.'); return; }
+  }
+  const boss = $('#xe-boss').checked;
+  const whenChanged = date !== e.date || time !== (e.time || '09:30');
+  const bossChanged = boss !== (e.boss !== false);
+  e.title = title;
+  e.subject = $('#xe-sub').value || e.subject;
+  e.date = date; e.time = time;
+  e.note = ($('#xe-note').value || '').trim();
+  e.alarmDays = Math.max(0, Math.min(14, Number($('#xe-alarm').value) || 0));
+  e.boss = boss;
+  if (whenChanged) state.alarmsLast[e.id] = past ? todayStr() : ''; // ileri alınan sınavın alarmı yeniden çalsın
+  closeDetail();
+  if (score == null && e.score != null) {
+    clearExamScore(e);
+    save(); renderAll(); toast('✅ Sınav güncellendi • not silindi, XP geri alındı');
+    return;
+  }
+  if (score != null && (e.score == null || Math.abs(Number(e.score) - score) > 0.001 || bossChanged)) {
+    applyExamScore(e, score); // XP/altın farkını hesaplar, kaydeder ve bildirir
+    return;
+  }
+  save(); renderAll(); toast('✅ Sınav güncellendi');
 }
 function deleteExam(id){
   if (ui.role !== 'parent') return;
