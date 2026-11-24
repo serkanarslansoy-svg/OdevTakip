@@ -160,6 +160,9 @@ ekrana yapıştır. Anahtar yalnızca o cihazda saklanır, buluta gitmez.
 - Argo'nun resmi bir API'si yok; gayriresmi [didupAPI-wrapper](https://github.com/Rocciadura/didupAPI-wrapper)
   kütüphanesi kullanılır. Argo giriş yöntemini değiştirirse çekme durabilir; uygulama
   çalışmaya devam eder, "Son çalışma" satırında hata görünür.
+- Kasım 2026'da Argo uygulamanın eski veri adresini kapattı; senkron artık Famiglia web
+  sitesinin kullandığı adrese (didattica.portaleargo.it) sitenin girişiyle bağlanıyor. O yol
+  kapanırsa uygulamanın yolları sırayla denenir; şifre hatasında başka yol denenmez.
 - GitHub, depoda 60 gün hiç değişiklik olmazsa zamanlanmış görevleri durdurur. Öyle olursa
   Actions sekmesinden tekrar etkinleştir.
 
