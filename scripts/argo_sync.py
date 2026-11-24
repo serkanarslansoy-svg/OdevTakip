@@ -293,54 +293,127 @@ def describe_consent_page() -> str:
                                                     ensure_ascii=False)
 
 
+# Kasım 2026: Argo uygulama API'sini (www.portaleargo.it/appfamiglia/api/rest) kapattı (her
+# isteğe 503). Famiglia web sitesi aynı API'yi (login, dashboard/dashboard; aynı alanlar) yeni
+# adreste kullanıyor: didattica.portaleargo.it/famiglia/api. Giriş, sitenin kendi OIDC
+# istemcisiyle (aynı auth.portaleargo.it) yapılır ve istekler "os-type: WEB" taşır.
+ARGO_API_WEB = "https://didattica.portaleargo.it/famiglia/api/"
+ARGO_API_APP_OLD = "https://www.portaleargo.it/appfamiglia/api/rest/"
+WEB_CLIENT_ID = "8aef9dcb-e948-462a-a239-646a54a44ddb"
+WEB_REDIRECT_URI = "https://www.portaleargo.it/famiglia/oidc-callback.html"
+WEB_VERSION_FALLBACK = "4.3.0"
+
+
+class ArgoUnavailable(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+def web_version() -> str:
+    """Famiglia web sitesinin sürümü (argo-client-version). Bulunamazsa bilinen son sürüm."""
+    try:
+        page = requests.get("https://www.portaleargo.it/famiglia/", timeout=20).text
+        m = re.search(r'src="(/famiglia/assets/main-[^"]+\.js)"', page)
+        if m:
+            js = requests.get("https://www.portaleargo.it" + m.group(1), timeout=20).text
+            v = re.search(r'="(\d+\.\d+\.\d+)",\w+=\{name:"Famiglia WEB"', js)
+            if v:
+                return v.group(1)
+    except requests.RequestException:
+        pass
+    return WEB_VERSION_FALLBACK
+
+
+def argo_attempts() -> list[tuple[str, dict]]:
+    """Sırayla denenecek bağlantı ayarları: önce web sitesinin yolu, sonra uygulamanınki."""
+    from dataclasses import dataclass
+
+    from didupwrapper.auth import ArgoConfig
+
+    @dataclass(frozen=True)
+    class WebConfig(ArgoConfig):
+        def headers_base(self) -> dict[str, str]:
+            headers = super().headers_base()
+            headers["os-type"] = "WEB"
+            return headers
+
+    web = WebConfig(api_base_url=ARGO_API_WEB, client_id=WEB_CLIENT_ID, redirect_uri=WEB_REDIRECT_URI,
+                    scopes=("openid", "profile"), version=web_version())
+    return [
+        ("web", {"config": web, "auto_versione": False}),
+        ("uygulama-yeni-adres", {"config": ArgoConfig(api_base_url=ARGO_API_WEB), "auto_versione": True}),
+        ("uygulama-eski-adres", {"config": ArgoConfig(api_base_url=ARGO_API_APP_OLD), "auto_versione": True}),
+    ]
+
+
+def is_credential_error(exc: Exception) -> bool:
+    """Şifre/kullanıcı hatası: başka yolu denemek hesabı kilitletebilir, hemen dur."""
+    msg = str(getattr(exc, "message", "") or exc).lower()
+    return "login sso fallito" in msg or "credenziali" in msg
+
+
 def fetch_argo(scuola: str, user: str, password: str) -> tuple[list[dict], list[dict] | None, list | None]:
     """(ödevler, promemoria, notlar). Promemoria/notlar alınamazsa None döner; ödevler yine yazılır."""
     from didupwrapper import DiDUPClientSync
 
     _capture_consent_pages()
+    errors: list[str] = []
+    for name, kwargs in argo_attempts():
+        try:
+            with DiDUPClientSync(scuola, user, password, **kwargs) as didup:
+                result = read_argo(didup)
+            log(f"Argo bağlantısı: {name}")
+            return result
+        except Exception as exc:  # noqa: BLE001 - sıradaki yolu dene
+            errors.append(f"{name}: {describe_error(exc)}")
+            if is_credential_error(exc):
+                break
+    raise ArgoUnavailable(" | ".join(errors))
 
+
+def read_argo(didup) -> tuple[list[dict], list[dict] | None, list | None]:  # type: ignore[no-untyped-def]
     items: list[dict] = []
     notes: list[dict] | None = None
     grades: list | None = None
     # Öğretmen -> verdiği dersler (promemoria'da ders alanı yok, öğretmenden çıkarıyoruz).
     teacher_subjects: dict[str, set[str]] = {}
-    with DiDUPClientSync(scuola, user, password, auto_versione=True) as didup:
-        for lezione in didup.get_registro():
-            for tkey in (lezione.pk_docente, " ".join((lezione.docente or "").split()).lower()):
-                if tkey and lezione.materia:
-                    teacher_subjects.setdefault(tkey, set()).add(lezione.materia)
-            for compito in lezione.compiti:
-                text = " ".join((compito.compito or "").split())
-                due = parse_day(compito.data_consegna)
-                if not text or due is None:
-                    continue
-                items.append({
-                    "materia": lezione.materia or "",
-                    "assigned": (lezione.dat_giorno or "")[:10],
-                    "due": due,
-                    "text": text,
-                })
-        try:
-            notes = []
-            for p in didup.get_promemoria():
-                if not p.flg_visibile_famiglia:
-                    continue
-                text = " ".join((p.des_annotazioni or "").split())
-                day = parse_day(p.dat_giorno)
-                if not text or day is None:
-                    continue
-                subs = teacher_subjects.get(p.pk_docente) or teacher_subjects.get(
-                    " ".join((p.docente or "").split()).lower()) or set()
-                notes.append({"day": day, "text": text, "subjects": sorted(subs),
-                              "time": clean_time(p.ora_inizio)})
-        except Exception as exc:  # noqa: BLE001 - ödevler yine de yazılsın
-            log(f"Promemoria alınamadı: {type(exc).__name__}")
-            notes = None
-        try:
-            grades = list(didup.get_voti())
-        except Exception as exc:  # noqa: BLE001
-            log(f"Notlar alınamadı: {type(exc).__name__}")
-            grades = None
+    for lezione in didup.get_registro():
+        for tkey in (lezione.pk_docente, " ".join((lezione.docente or "").split()).lower()):
+            if tkey and lezione.materia:
+                teacher_subjects.setdefault(tkey, set()).add(lezione.materia)
+        for compito in lezione.compiti:
+            text = " ".join((compito.compito or "").split())
+            due = parse_day(compito.data_consegna)
+            if not text or due is None:
+                continue
+            items.append({
+                "materia": lezione.materia or "",
+                "assigned": (lezione.dat_giorno or "")[:10],
+                "due": due,
+                "text": text,
+            })
+    try:
+        notes = []
+        for p in didup.get_promemoria():
+            if not p.flg_visibile_famiglia:
+                continue
+            text = " ".join((p.des_annotazioni or "").split())
+            day = parse_day(p.dat_giorno)
+            if not text or day is None:
+                continue
+            subs = teacher_subjects.get(p.pk_docente) or teacher_subjects.get(
+                " ".join((p.docente or "").split()).lower()) or set()
+            notes.append({"day": day, "text": text, "subjects": sorted(subs),
+                          "time": clean_time(p.ora_inizio)})
+    except Exception as exc:  # noqa: BLE001 - ödevler yine de yazılsın
+        log(f"Promemoria alınamadı: {type(exc).__name__}")
+        notes = None
+    try:
+        grades = list(didup.get_voti())
+    except Exception as exc:  # noqa: BLE001
+        log(f"Notlar alınamadı: {type(exc).__name__}")
+        grades = None
     return items, notes, grades
 
 
@@ -439,8 +512,12 @@ def describe_error(exc: Exception) -> str:
     kind = type(exc).__name__
     msg = str(getattr(exc, "message", "") or "")
     msg = re.sub(r"https?://\S+", lambda m: m.group(0).split("?")[0], msg)  # adreslerden sorguyu at
-    msg = " ".join(msg.split())[:160]
+    msg = re.sub(r"<[^>]+>", " ", msg)  # sunucunun HTML hata sayfası (ör. 503) -> düz metin
+    msg = " ".join(msg.split())
+    msg = msg[:600] if isinstance(exc, ArgoUnavailable) else msg[:160]
     code = getattr(exc, "status_code", None)
+    if isinstance(exc, ArgoUnavailable):
+        return msg
     out = kind + (f": {msg}" if msg else "")
     return out + (f" (HTTP {code})" if code else "")
 
