@@ -8,6 +8,58 @@
 > Depo **herkese açıktır** (GitHub Pages için). Bu dosyaya ve depoya **asla** şifre, token,
 > okul kodu, Argo kullanıcı adı, e-posta, Firebase aile UID'si gibi gizli/kişisel bilgi yazma.
 
+**For AI assistants (English summary):** This repo is "Ödev Avcısı", a gamified homework/exam
+tracker that a Turkish-speaking parent built for his son ("Ruz"), who attends an Italian middle
+school. The whole app is one file, `index.html` (vanilla JS, Tailwind CDN, Firebase Realtime DB
+sync), served by GitHub Pages. `scripts/argo_sync.py`, run by GitHub Actions, pulls homework,
+teacher reminders (promemoria) and grades from the school's Argo DidUP system into Firebase for
+parent approval. The user is not a developer: **reply in Turkish**, keep it simple, **push every
+change directly to `main`** (no branches or PRs), test in a browser before pushing, and never write
+secrets into this public repo. Everything below is in Turkish. Start with §0.1.
+
+---
+
+## 0.1 Yeni Oturuma Başlarken (ilk iş bunları yap)
+
+1. **Doğru depoda mısın?** Proje deposu: `serkanarslansoy-svg/OdevTakip`
+   (https://github.com/serkanarslansoy-svg/OdevTakip). Oturum başka bir depoda açıldıysa bu depoyu
+   oturuma ekle (Claude Code web'de `add_repo`) ve klonla:
+   `git clone https://github.com/serkanarslansoy-svg/OdevTakip`. Sonra `git pull origin main`.
+2. **Bu dosyayı baştan sona oku**, sonra gerekiyorsa `KURULUM.md`'ye bak (kullanıcının gördüğü rehber).
+3. **Son durumu kontrol et:**
+   - `git log --oneline -15` → son yapılanlar (commit mesajları Türkçe ve açıklayıcı).
+   - Argo senkronu çalışıyor mu? (§7.6 adım 1–2). Son çalışmalar başarısızsa kullanıcı muhtemelen
+     "senkron çalışmıyor" diyecek; önceden bak.
+   - Canlı site açılıyor mu: https://serkanarslansoy-svg.github.io/OdevTakip/
+4. **§12 Açık İşler**'e bak: kullanıcıya önceden önerilip cevap beklenen şeyler orada.
+5. Kullanıcı ekran görüntüsüyle gelirse: görüntü uygulamanın bir ekranıdır (koyu tema, neon yeşil).
+   Hangi ekran olduğunu §3.2'deki ekran listesinden bul; Türkçe etiketler doğrudan koddaki
+   metinlerle aranabilir (`grep -n "Etiket" index.html`).
+6. İş bitince: test (§8) → commit (Türkçe) → `git push origin main` → yayını doğrula (§8.4) →
+   bu dosyayı güncelle (§13) → kullanıcıya Türkçe, kısa özet.
+
+## 0.2 Sözlük (Türkçe / İtalyanca terimler)
+
+| Terim | Anlamı |
+|---|---|
+| Veli / Komutan | Ebeveyn (baba); uygulamada yönetici rol, PIN ile girer. |
+| Öğrenci / Ruz | Çocuk; görevleri yapan, XP/altın kazanan rol. |
+| Görev / Ödev | Task. Uygulamada her ödev bir "görev"dir. |
+| Sınav / Boss / Boss Savaşı | Exam; önemli sınav "Boss" (daha çok XP, rozet). |
+| XP, Altın (🪙), Seviye, Seri, Rozet | Oyun puanı, ödül mağazası parası, level, ardışık gün, başarım. |
+| Yapılmadı | Süresi geçmiş, yapılmamış görev (`status:'missed'`, XP cezası). |
+| Onay bekliyor | Öğrenci "bitti" dedi, veli onayı bekleniyor (`status:'pending'`). |
+| Panel, Görev Ata, Planla, Ödül, Ayarlar | Veli ekranları. |
+| Görevler, Dersler, Takvim, Program, Sınavlar, Ödüller | Öğrenci ekranları. |
+| Kelime Avı | Günlük İtalyanca→Türkçe kelime oyunu. |
+| Argo / DidUP / portaleargo | Okulun elektronik kayıt sistemi (İtalya). |
+| compiti assegnati | (İt.) Verilen ödevler. |
+| promemoria | (İt.) Öğretmen hatırlatması (sınav duyurusu, "şunu getir" vb.). |
+| voti | (İt.) Notlar. scritto = yazılı (S), orale = sözlü (N), pratico = uygulama (P). |
+| verifica / interrogazione | (İt.) Yazılı sınav / sözlü sınav. |
+| Terza Media | (İt.) Ortaokul 3. sınıf. |
+| BES / DSA | (İt.) Özel eğitim ihtiyacı olan öğrenciler (ödev metinlerinde geçer). |
+
 ---
 
 ## 0. Kısa Özet
@@ -510,7 +562,8 @@ curl -sS "https://serkanarslansoy-svg.github.io/OdevTakip/?v=$(date +%s)" | grep
 - 16 Kas: Sınav düzenleme formu (Takvim + Planla; not/Boss değişince XP farkı) (c67c6b6).
 - 24 Kas: Argo uygulama API'si kapandı (17 Kas'tan beri 503) → Famiglia web API'sine geçildi,
   yedek yollar + şifre hatasında dur (0c7f93c). İlk çalışmada 157 ödev, 33 promemoria, 31 not.
-- 28 Kas: Bu `CLAUDE.md` eklendi.
+- 28 Kas: Bu `CLAUDE.md` eklendi (kullanıcının Claude hesabı değişeceği için kalıcı hafıza);
+  İngilizce özet, "yeni oturuma başlarken" listesi, sözlük ve depo için `README.md` eklendi.
 
 ---
 
@@ -526,6 +579,20 @@ curl -sS "https://serkanarslansoy-svg.github.io/OdevTakip/?v=$(date +%s)" | grep
 - `checkAlarms`'taki `alarmDays || 2` tuhaflığı (0 gün seçilebilsin istenirse düzelt).
 - Actions sürümlerini Node 24 uyumlu sürümlere yükseltmek.
 - `scripts/__pycache__`'i depodan çıkarıp `.gitignore`'a eklemek (kullanıcı onayıyla).
+
+---
+
+## 12.1 Claude Hesabı Değişirse (kullanıcı için kısa yol)
+
+Kullanıcının Claude hesabı değişebilir; proje hafızası bu dosyada olduğu için kayıp olmaz.
+Yeni hesapta:
+1. claude.ai → Ayarlar → Bağlantılar'dan **GitHub hesabını bağla** ve Claude GitHub uygulamasının
+   `serkanarslansoy-svg/OdevTakip` deposuna erişimi olduğundan emin ol.
+2. Claude Code'da (web/telefon) yeni oturumu **OdevTakip deposunu seçerek** başlat.
+3. İlk mesaj olarak şunu yazmak yeterli: *"CLAUDE.md'yi oku, projeye kaldığımız yerden devam edelim."*
+- GitHub Secrets (Argo/Firebase), Firebase projesi, GitHub Pages ve otomatik senkron **Claude
+  hesabından bağımsızdır**; hesap değişince hiçbiri durmaz.
+- Uygulamadaki "Şimdi Senkronize Et" düğmesinin GitHub anahtarı da Claude'a bağlı değildir.
 
 ---
 
